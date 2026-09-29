@@ -56,6 +56,15 @@ async function getLessonMedia(lessonId){
     req.onerror=()=>reject(req.error);
   });
 }
+async function getAllLessonMedia(){
+  const db=await openMediaDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(MEDIA_STORE,"readonly");
+    const req=tx.objectStore(MEDIA_STORE).getAll();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=()=>reject(req.error);
+  });
+}
 async function deleteLessonMediaItem(id){
   const db=await openMediaDb();
   return new Promise((resolve,reject)=>{
@@ -1157,6 +1166,123 @@ function renderShared(){
   $("#streakCount").textContent=streak();$("#levelBadge").textContent="Lv."+level();$("#coachAdvice").textContent=coachAdvice();
   renderDaily();renderLessons();renderTeacherLessons();renderTeacherHomework();renderEarStats();renderProgress()
 }
+
+function blobToDataUrl(blob){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||""));
+    reader.onerror=()=>reject(reader.error||new Error("FileReader failed"));
+    reader.readAsDataURL(blob);
+  });
+}
+function dataUrlToBlob(dataUrl){
+  const comma=dataUrl.indexOf(",");
+  if(comma<0)throw new Error("Invalid media data");
+  const head=dataUrl.slice(0,comma);
+  const body=dataUrl.slice(comma+1);
+  const mime=(head.match(/^data:([^;]+)/)||[])[1]||"application/octet-stream";
+  const binary=head.includes(";base64")?atob(body):decodeURIComponent(body);
+  const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  return new Blob([bytes],{type:mime});
+}
+function humanBytes(bytes){
+  if(bytes<1024)return bytes+" B";
+  if(bytes<1024*1024)return (bytes/1024).toFixed(1)+" KB";
+  if(bytes<1024*1024*1024)return (bytes/1024/1024).toFixed(1)+" MB";
+  return (bytes/1024/1024/1024).toFixed(2)+" GB";
+}
+
+$("#exportFullBackup")?.addEventListener("click",async()=>{
+  const btn=$("#exportFullBackup"),status=$("#fullBackupStatus");
+  btn.disabled=true;
+  if(status)status.textContent="正在整理文字、照片與錄音…";
+  try{
+    const items=await getAllLessonMedia();
+    const media=[];
+    let rawBytes=0;
+    for(let i=0;i<items.length;i++){
+      const item=items[i];
+      rawBytes+=item.blob?.size||0;
+      if(status)status.textContent="正在打包附件 "+(i+1)+" / "+items.length+"…";
+      media.push({
+        id:item.id,
+        lessonId:item.lessonId,
+        type:item.type,
+        mimeType:item.mimeType||item.blob?.type||"",
+        name:item.name||"",
+        createdAt:item.createdAt||Date.now(),
+        data:await blobToDataUrl(item.blob)
+      });
+    }
+    const payload={
+      format:"guitar-coach-full-backup",
+      version:1,
+      createdAt:new Date().toISOString(),
+      appState:state,
+      media
+    };
+    const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="guitar-coach-full-"+localDateKey()+".guitarcoach";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1200);
+    if(status)status.textContent="完整備份完成："+items.length+" 個附件，約 "+humanBytes(rawBytes)+"（原始附件大小）";
+    toast("完整本機備份已匯出");
+  }catch(e){
+    if(status)status.textContent="完整備份失敗，請確認裝置可用空間後再試。";
+    toast("完整備份失敗");
+  }finally{
+    btn.disabled=false;
+  }
+});
+
+$("#importFullBackup")?.addEventListener("change",async e=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
+  const status=$("#fullBackupStatus");
+  try{
+    if(status)status.textContent="正在讀取完整備份…";
+    const obj=JSON.parse(await file.text());
+    if(!obj||obj.format!=="guitar-coach-full-backup"||obj.version!==1||!obj.appState||!Array.isArray(obj.media)){
+      throw new Error("Unsupported backup");
+    }
+    if(!confirm("完整還原會以備份內容取代這台裝置目前的 Guitar Coach 資料與課堂附件。確定繼續？")){
+      if(status)status.textContent="已取消完整還原。";
+      e.target.value="";
+      return;
+    }
+    await clearAllLessonMedia();
+    for(let i=0;i<obj.media.length;i++){
+      const item=obj.media[i];
+      if(status)status.textContent="正在還原附件 "+(i+1)+" / "+obj.media.length+"…";
+      await putLessonMedia({
+        id:item.id||("media-"+Date.now()+"-"+i),
+        lessonId:item.lessonId,
+        type:item.type,
+        blob:dataUrlToBlob(item.data),
+        mimeType:item.mimeType||"",
+        name:item.name||"",
+        createdAt:item.createdAt||Date.now()
+      });
+    }
+    state=deepMerge(structuredClone(defaultState),obj.appState);
+    localStorage.setItem(STORE_KEY,JSON.stringify(state));
+    localStorage.removeItem(TEACHER_DRAFT_KEY);
+    renderShared();
+    refreshTeacherStorageUsage();
+    if(status)status.textContent="完整還原完成："+obj.media.length+" 個附件。";
+    toast("完整備份已還原");
+  }catch(err){
+    if(status)status.textContent="這個完整備份檔無法讀取或內容不完整。";
+    toast("完整還原失敗");
+  }
+  e.target.value="";
+});
 
 $("#exportData").onclick=()=>{
   const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="guitar-coach-backup-"+localDateKey()+".json";a.click();URL.revokeObjectURL(a.href);toast("備份已匯出")

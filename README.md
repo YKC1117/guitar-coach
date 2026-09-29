@@ -94,3 +94,13 @@ Guitar Coach 採 local-first 隱私架構：
 - 瀏覽器 CSP 設為 connect-src 'none'，頁面本身禁止對外 API 連線
 - Service Worker 只允許 fetch(e.request) 取得目前網站資源
 - scripts/privacy-guard.mjs 會在 GitHub Actions 每次 push / PR 自動檢查
+
+
+## V3.5 完整本機備份
+
+- 新增完整備份檔 `.guitarcoach`
+- 完整備份包含：練習進度、課堂筆記、回家作業、課堂照片、老師示範錄音
+- 完整備份直接在瀏覽器本機打包並下載，不經 API、不上傳 GitHub
+- 完整還原會先確認，再以備份內容取代目前裝置資料
+- 保留原本輕量 JSON 文字備份
+- 資料管理頁新增本機隱私狀態卡

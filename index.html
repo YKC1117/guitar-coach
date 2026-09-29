@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <title>Guitar Coach｜吉他學習教練</title>
-  <link rel="stylesheet" href="./styles.css?v=3.4.1">
+  <link rel="stylesheet" href="./styles.css?v=3.5.0">
 </head>
 <body>
 <div class="app-shell">
@@ -486,11 +486,50 @@
         <div class="coach-copy"><span class="kicker">NEXT STEP</span><p id="progressAdvice">開始第一次練習後，這裡會給你下一步建議。</p></div>
       </div>
 
+      <article class="privacy-card">
+        <div class="privacy-status-row">
+          <div>
+            <span class="kicker">PRIVACY</span>
+            <h2>本機隱私模式</h2>
+            <p>課堂筆記、照片與錄音只存在目前裝置。網站已禁止對外 API 連線。</p>
+          </div>
+          <span class="privacy-badge">LOCAL ONLY</span>
+        </div>
+        <div class="privacy-facts">
+          <span><i></i>外部 API：關閉</span>
+          <span><i></i>第三方分析：無</span>
+          <span><i></i>照片 / 錄音：IndexedDB</span>
+        </div>
+      </article>
+
       <article class="data-card">
-        <div><span class="kicker">DATA</span><h2>資料管理</h2><p>所有進度預設只存在這台裝置。</p></div>
-        <div class="button-row wrap">
-          <button class="secondary" id="exportData">匯出備份</button>
-          <label class="secondary file-label">匯入備份<input type="file" id="importData" accept="application/json"></label>
+        <div>
+          <span class="kicker">BACKUP</span>
+          <h2>備份與還原</h2>
+          <p>輕量備份只含文字；完整備份會把課堂照片與錄音一起打包到你的裝置。</p>
+        </div>
+
+        <div class="backup-groups">
+          <div class="backup-group">
+            <div><strong>完整本機備份</strong><span>課堂紀錄＋練習進度＋照片＋錄音</span></div>
+            <div class="button-row wrap">
+              <button class="primary" id="exportFullBackup">匯出完整備份</button>
+              <label class="secondary file-label">完整還原<input type="file" id="importFullBackup" accept=".guitarcoach,application/json"></label>
+            </div>
+            <small id="fullBackupStatus">備份檔只在你的裝置上產生，不會上傳網路。</small>
+          </div>
+
+          <div class="backup-group compact">
+            <div><strong>輕量文字備份</strong><span>不包含照片與錄音</span></div>
+            <div class="button-row wrap">
+              <button class="secondary" id="exportData">匯出 JSON</button>
+              <label class="secondary file-label">匯入 JSON<input type="file" id="importData" accept="application/json"></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="danger-zone">
+          <span>刪除這台裝置上的所有 Guitar Coach 資料與附件。</span>
           <button class="danger" id="resetData">清除所有紀錄</button>
         </div>
       </article>
@@ -506,6 +545,6 @@
   </nav>
   <div class="toast" id="toast"></div>
 </div>
-<script src="./app.js?v=3.4.1"></script>
+<script src="./app.js?v=3.5.0"></script>
 </body>
 </html>
