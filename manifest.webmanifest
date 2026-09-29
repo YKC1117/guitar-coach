@@ -1,0 +1,11 @@
+{
+  "name":"Guitar Coach｜AI 吉他教練",
+  "short_name":"Guitar Coach",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#f5f7fb",
+  "theme_color":"#0f172a",
+  "lang":"zh-Hant",
+  "icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
