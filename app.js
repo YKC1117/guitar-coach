@@ -379,6 +379,7 @@ function openTeacherForm(id=null,seed=null){
   const status=$("#teacherDraftStatus");
   if(status)status.textContent=(!record&&draft)?"已恢復上次未儲存草稿":"會自動暫存，不怕上課中途關掉。";
   renderTeacherMediaPreview();
+  refreshTeacherStorageUsage();
   $("#teacherLessonForm").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function closeTeacherForm(){
@@ -465,7 +466,7 @@ async function renderTeacherMediaPreview(){
       del.type="button";del.textContent="×";del.setAttribute("aria-label","刪除附件");
       del.addEventListener("click",async()=>{
         await deleteLessonMediaItem(item.id);
-        renderTeacherMediaPreview();renderTeacherLessons();
+        renderTeacherMediaPreview();renderTeacherLessons();refreshTeacherStorageUsage();
         toast("附件已刪除");
       });
       wrap.appendChild(del);
@@ -476,14 +477,35 @@ async function renderTeacherMediaPreview(){
   }
 }
 
+
+async function refreshTeacherStorageUsage(){
+  const el=$("#teacherStorageUsage");
+  if(!el)return;
+  try{
+    if(!navigator.storage?.estimate){el.textContent="本機儲存";return}
+    const info=await navigator.storage.estimate();
+    const used=Number(info.usage||0),quota=Number(info.quota||0);
+    const mb=n=>(n/1024/1024).toFixed(n>1024*1024*1024?0:1);
+    el.textContent=quota?("本機 "+mb(used)+" / "+mb(quota)+" MB"):("本機 "+mb(used)+" MB");
+  }catch(e){
+    el.textContent="本機儲存";
+  }
+}
+async function preferPersistentStorage(){
+  try{
+    if(navigator.storage?.persisted&&await navigator.storage.persisted())return true;
+    if(navigator.storage?.persist)return await navigator.storage.persist();
+  }catch(e){}
+  return false;
+}
+
 $("#teacherPhotoInput")?.addEventListener("change",async e=>{
   const files=[...(e.target.files||[])].filter(f=>f.type.startsWith("image/"));
   if(!files.length)return;
   if(!currentTeacherMediaOwner)currentTeacherMediaOwner="class-"+Date.now();
   try{
-    const existing=await getLessonMedia(currentTeacherMediaOwner);
-    const room=Math.max(0,12-existing.length);
-    for(const file of files.slice(0,room)){
+    await preferPersistentStorage();
+    for(const file of files){
       const blob=await compressTeacherPhoto(file);
       await putLessonMedia({
         id:"media-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),
@@ -495,10 +517,10 @@ $("#teacherPhotoInput")?.addEventListener("change",async e=>{
         createdAt:Date.now()
       });
     }
-    if(files.length>room)toast("每堂課最多保留 12 個附件");
-    else toast("照片已加入這堂課");
+    toast("照片已加入這堂課");
     writeTeacherDraft();
     renderTeacherMediaPreview();
+    refreshTeacherStorageUsage();
   }catch(err){
     toast("照片儲存失敗，請確認瀏覽器儲存空間");
   }
@@ -514,6 +536,7 @@ $("#teacherAudioRecord")?.addEventListener("click",async()=>{
   }
   if(!currentTeacherMediaOwner)currentTeacherMediaOwner="class-"+Date.now();
   try{
+    await preferPersistentStorage();
     teacherMediaStream=await navigator.mediaDevices.getUserMedia({audio:true});
     teacherMediaChunks=[];
     const candidates=["audio/mp4","audio/webm;codecs=opus","audio/webm"];
@@ -538,6 +561,7 @@ $("#teacherAudioRecord")?.addEventListener("click",async()=>{
           toast("示範錄音已加入這堂課");
           writeTeacherDraft();
           renderTeacherMediaPreview();
+          refreshTeacherStorageUsage();
         }catch(e){
           toast("錄音儲存失敗");
         }
@@ -556,10 +580,6 @@ $("#teacherAudioRecord")?.addEventListener("click",async()=>{
     teacherMediaTimer=setInterval(()=>{
       const sec=Math.floor((Date.now()-teacherMediaStartedAt)/1000);
       $("#teacherRecordingTime").textContent=formatClock(sec);
-      if(sec>=180){
-        stopTeacherAudioRecording();
-        toast("示範錄音已達 3 分鐘，自動停止");
-      }
     },250);
   }catch(e){
     toast("請允許瀏覽器使用麥克風");

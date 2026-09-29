@@ -10,7 +10,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <title>Guitar Coach｜吉他學習教練</title>
-  <link rel="stylesheet" href="./styles.css?v=3.4.0">
+  <link rel="stylesheet" href="./styles.css?v=3.4.1">
 </head>
 <body>
 <div class="app-shell">
@@ -188,7 +188,7 @@
                 <span class="quick-note-label">老師示範 / 上課附件</span>
                 <small>拍手型、板書或教材，也可以錄一小段老師示範。</small>
               </div>
-              <span class="media-local-note">只存在這台裝置</span>
+              <span class="media-local-note" id="teacherStorageUsage">本機儲存</span>
             </div>
             <div class="lesson-media-actions">
               <label class="media-action">
@@ -202,7 +202,7 @@
               <i></i><span>錄音中</span><strong id="teacherRecordingTime">00:00</strong>
             </div>
             <div class="teacher-media-preview" id="teacherMediaPreview"></div>
-            <p class="media-help">照片與錄音不會上傳雲端；目前 JSON 備份只包含文字紀錄，不包含媒體附件。</p>
+            <p class="media-help">照片與錄音直接使用這台手機／平板／電腦的瀏覽器儲存空間，不上傳雲端；JSON 備份目前不包含媒體附件。</p>
           </div>
 
           <div class="homework-builder">
@@ -504,6 +504,6 @@
   </nav>
   <div class="toast" id="toast"></div>
 </div>
-<script src="./app.js?v=3.4.0"></script>
+<script src="./app.js?v=3.4.1"></script>
 </body>
 </html>
