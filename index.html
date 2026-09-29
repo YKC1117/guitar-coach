@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <title>Guitar Coach｜吉他學習教練</title>
-  <link rel="stylesheet" href="./styles.css?v=3.7.1">
+  <link rel="stylesheet" href="./styles.css?v=3.7.2">
 </head>
 <body>
 <div class="app-shell">
@@ -113,6 +113,16 @@
             </div>
             <span class="teacher-prep-count" id="teacherPrepCount">0</span>
           </div>
+
+          <div class="teacher-quick-question">
+            <label for="quickTeacherQuestion">臨時想到要問老師的事</label>
+            <div class="teacher-quick-question-row">
+              <input id="quickTeacherQuestion" placeholder="例如：F 和弦怎麼壓才不會悶音？" autocomplete="off">
+              <button class="primary" id="addQuickTeacherQuestion" type="button">加入</button>
+            </div>
+            <small>直接在首頁記，按 Enter 也能加入，不用先進課堂筆記。</small>
+          </div>
+
           <div class="teacher-question-list" id="teacherQuestionList"></div>
         </div>
       </section>
@@ -617,6 +627,6 @@
   </nav>
   <div class="toast" id="toast"></div>
 </div>
-<script src="./app.js?v=3.7.1"></script>
+<script src="./app.js?v=3.7.2"></script>
 </body>
 </html>

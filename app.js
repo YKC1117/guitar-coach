@@ -8,7 +8,7 @@ const TEACHER_DRAFT_KEY = "guitarCoachTeacherDraftV1";
 const defaultState = {
   version:2, days:{}, totalMinutes:0, totalSwitches:0, tunerSessions:0,
   bestSwitch:null, lessons:{}, ear:{correct:0,total:0}, practiceSessions:0,
-  teacherLessons:[],
+  teacherLessons:[], teacherPrepQuestions:[],
   createdAt:Date.now(), lastActive:null
 };
 
@@ -854,6 +854,40 @@ function renderTeacherHomework(){
 }
 
 
+function teacherPrepQuestions(){
+  if(!Array.isArray(state.teacherPrepQuestions))state.teacherPrepQuestions=[];
+  return state.teacherPrepQuestions;
+}
+function addTeacherPrepQuestion(text){
+  const value=String(text||"").trim();
+  if(!value)return false;
+  const list=teacherPrepQuestions();
+  if(list.some(x=>!x.done&&x.text===value)){toast("這個問題已經在清單裡");return false}
+  list.unshift({id:"prep-q-"+Date.now(),text:value,done:false,createdAt:Date.now()});
+  saveState();
+  toast("已加入下次上課問題");
+  return true;
+}
+function toggleTeacherPrepQuestion(id){
+  const item=teacherPrepQuestions().find(x=>x.id===id);
+  if(!item)return;
+  item.done=!item.done;
+  saveState();
+  toast(item.done?"已標記為問過老師":"已恢復為待問");
+}
+function addQuickTeacherQuestionFromHome(){
+  const input=$("#quickTeacherQuestion");
+  if(!input)return;
+  if(addTeacherPrepQuestion(input.value))input.value="";
+}
+$("#addQuickTeacherQuestion")?.addEventListener("click",addQuickTeacherQuestionFromHome);
+$("#quickTeacherQuestion")?.addEventListener("keydown",e=>{
+  if(e.key==="Enter"){
+    e.preventDefault();
+    addQuickTeacherQuestionFromHome();
+  }
+});
+
 function renderTeacherPrep(){
   const section=$("#teacherPrepSection");
   const list=$("#teacherQuestionList");
@@ -863,6 +897,7 @@ function renderTeacherPrep(){
   const pending=[];
   records.forEach(r=>(r.questions||[]).forEach(q=>{
     if(!q.done)pending.push({
+      source:"lesson",
       lessonId:r.id,
       questionId:q.id,
       text:q.text,
@@ -871,6 +906,16 @@ function renderTeacherPrep(){
       topic:r.topic||r.song||"課堂筆記"
     });
   }));
+  teacherPrepQuestions().forEach(q=>{
+    if(!q.done)pending.push({
+      source:"quick",
+      questionId:q.id,
+      text:q.text,
+      nextDate:"",
+      date:"",
+      topic:"首頁快速記下"
+    });
+  });
 
   const today=new Date();
   today.setHours(0,0,0,0);
@@ -904,14 +949,12 @@ function renderTeacherPrep(){
   if(!pending.length){
     const empty=document.createElement("div");
     empty.className="teacher-question-empty";
-    empty.textContent=records.length
-      ?"目前沒有待問問題。可以打開課堂筆記，把今天卡住的地方加入「下次想問老師」。"
-      :"還沒有課堂紀錄。上完第一堂課後，可以在這裡準備下次要問老師的問題。";
+    empty.textContent="目前沒有待問問題。想到什麼，直接在上面的輸入框加入就好。";
     list.appendChild(empty);
     return;
   }
 
-  pending.slice(0,6).forEach(item=>{
+  pending.forEach(item=>{
     const row=document.createElement("button");
     row.className="teacher-prep-question";
 
@@ -922,23 +965,18 @@ function renderTeacherPrep(){
     const strong=document.createElement("strong");
     strong.textContent=item.text;
     const small=document.createElement("small");
-    small.textContent=item.nextDate
-      ?"下次 "+item.nextDate+" · "+item.topic
-      :(item.date+" · "+item.topic);
+    small.textContent=item.source==="quick"
+      ?"首頁快速記下 · 待下次上課"
+      :item.nextDate
+        ?"下次 "+item.nextDate+" · "+item.topic
+        :(item.date+" · "+item.topic);
 
     copy.append(strong,small);
     row.append(mark,copy);
-    row.onclick=()=>toggleTeacherQuestion(item.lessonId,item.questionId);
+    row.onclick=()=>item.source==="quick"?toggleTeacherPrepQuestion(item.questionId):toggleTeacherQuestion(item.lessonId,item.questionId);
     list.appendChild(row);
   });
 
-  if(pending.length>6){
-    const more=document.createElement("button");
-    more.className="teacher-question-more";
-    more.textContent="還有 "+(pending.length-6)+" 個問題，查看全部";
-    more.onclick=openTeacherLog;
-    list.appendChild(more);
-  }
 }
 
 function renderDaily(){
