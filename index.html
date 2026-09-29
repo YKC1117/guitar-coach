@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Guitar Coach">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <title>Guitar Coach｜AI 吉他教練</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brandMark">GC</div>
+      <div><h1>Guitar Coach</h1><p>你的吉他練習教練</p></div>
+      <div class="streak" id="streakChip">連續 0 天</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page active" id="page-home">
+      <div class="hero">
+        <div class="heroHead">
+          <div><h2>今天也來彈一下</h2><p id="coachLine">先把吉他調準，再花 20 分鐘把基本功練穩。</p></div>
+          <div class="heroScore"><strong id="todayPct">0%</strong><span>今日進度</span></div>
+        </div>
+        <div class="progress"><div id="todayBar"></div></div>
+        <div class="progressMeta"><span id="doneText">0 / 4 項</span><span>建議 20 分鐘</span></div>
+      </div>
+
+      <div class="quickGrid">
+        <button class="quick" data-go="tuner"><b>♪</b><strong>調音器</strong><span>用麥克風偵測單弦音準</span></button>
+        <button class="quick" data-go="metro"><b>●</b><strong>節拍器</strong><span>40–200 BPM / Tap Tempo</span></button>
+        <button class="quick" data-go="chords"><b>≋</b><strong>和弦練習</strong><span>C、G、Am、Em、F、Dm</span></button>
+        <button class="quick" data-go="progress"><b>↗</b><strong>我的進度</strong><span>分鐘、天數與切換紀錄</span></button>
+      </div>
+
+      <article class="card">
+        <div class="cardHead"><h3>今日練習</h3><button class="linkBtn" id="resetToday">重新開始</button></div>
+        <div id="taskList"></div>
+      </article>
+
+      <article class="card coach"><strong>教練建議</strong><p id="aiAdvice">先完成第一次練習，系統會依你的紀錄調整建議。</p></article>
+    </section>
+
+    <section class="page" id="page-tuner">
+      <div class="sectionTitle"><h2>調音器</h2><p>一次撥一條弦效果最好</p></div>
+      <article class="card">
+        <div class="notice" id="micHint">第一次使用請允許瀏覽器使用麥克風。GitHub Pages 為 HTTPS，可直接使用。</div>
+        <div class="tunerFace">
+          <div class="note" id="noteName">—</div>
+          <div class="muted" id="freqText">等待麥克風</div>
+          <div class="needle"><i></i><b id="needle"></b></div>
+          <div class="centRow"><span>-50</span><span>音準</span><span>+50</span></div>
+          <div class="status" id="tuneStatus">尚未開始</div>
+        </div>
+        <div class="stringGrid" id="stringGrid"></div>
+        <div class="actions"><button class="btn" id="tunerStart">開始調音</button><button class="btn ghost hidden" id="tunerStop">停止</button></div>
+      </article>
+    </section>
+
+    <section class="page" id="page-metro">
+      <div class="sectionTitle"><h2>節拍器</h2><p>先慢、再穩、最後才加速</p></div>
+      <article class="card">
+        <div class="metroFace"><div class="bpm" id="bpmText">70</div><div class="muted">BPM</div><div class="pulse" id="pulse"></div></div>
+        <input class="range" id="bpmRange" type="range" min="40" max="200" value="70">
+        <div class="presetRow"><button class="linkBtn" data-bpm="60">60</button><button class="linkBtn" data-bpm="80">80</button><button class="linkBtn" data-bpm="100">100</button><button class="linkBtn" data-bpm="120">120</button></div>
+        <div class="actions"><button class="btn" id="metroToggle">開始</button><button class="btn ghost" id="tapBtn">Tap Tempo</button></div>
+      </article>
+      <article class="card"><h3>初學者建議</h3><p class="muted">換和弦先用 60–70 BPM。能連續穩定 3 次，再一次增加 5 BPM。</p></article>
+    </section>
+
+    <section class="page" id="page-chords">
+      <div class="sectionTitle"><h2>和弦練習</h2><p>看圖 → 按弦 → 換下一個</p></div>
+      <article class="card center">
+        <div class="muted">目前和弦</div>
+        <div class="chordName" id="chordName">C</div>
+        <canvas id="chordCanvas" width="320" height="260"></canvas>
+        <div class="sequence" id="sequence"></div>
+        <div class="actions"><button class="btn" id="nextChord">下一個</button><button class="btn ghost" id="newSequence">換一組</button></div>
+        <div class="scoreGrid">
+          <div><strong id="switchCount">0</strong><span>本次切換</span></div>
+          <div><strong id="switchTime">0.0</strong><span>平均秒數</span></div>
+          <div><strong id="bestTime">—</strong><span>最快秒數</span></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="page" id="page-progress">
+      <div class="sectionTitle"><h2>我的進度</h2><p>資料只存在你的裝置</p></div>
+      <div class="stats">
+        <div><strong id="statDays">0</strong><span>練習天數</span></div>
+        <div><strong id="statMinutes">0</strong><span>練習分鐘</span></div>
+        <div><strong id="statSwitches">0</strong><span>和弦切換</span></div>
+      </div>
+      <article class="card coach"><strong>目前教練判斷</strong><p id="progressAdvice">完成一些練習後，這裡會告訴你下一步該加強什麼。</p></article>
+      <article class="card"><h3>最近練習</h3><div id="historyList" class="muted">還沒有紀錄。</div></article>
+      <button class="btn ghost full" id="clearData">清除所有本機紀錄</button>
+    </section>
+  </main>
+
+  <nav class="bottomNav">
+    <button class="nav active" data-page="home"><b>⌂</b><span>今日</span></button>
+    <button class="nav" data-page="tuner"><b>♪</b><span>調音</span></button>
+    <button class="nav" data-page="metro"><b>●</b><span>節拍</span></button>
+    <button class="nav" data-page="chords"><b>≋</b><span>和弦</span></button>
+    <button class="nav" data-page="progress"><b>↗</b><span>進度</span></button>
+  </nav>
+  <div class="toast" id="toast"></div>
+</div>
+<script src="./app.js"></script>
+</body>
+</html>
