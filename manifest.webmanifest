@@ -1,11 +1,14 @@
 {
-  "name":"Guitar Coach｜AI 吉他教練",
+  "name":"Guitar Coach｜吉他學習教練",
   "short_name":"Guitar Coach",
+  "description":"調音、節拍器、和弦、節奏、耳訓與學習進度，集中在一個手機優先的吉他練習 PWA。",
   "start_url":"./",
   "scope":"./",
   "display":"standalone",
-  "background_color":"#f5f7fb",
-  "theme_color":"#0f172a",
+  "orientation":"portrait-primary",
+  "background_color":"#f4f2ed",
+  "theme_color":"#111318",
   "lang":"zh-Hant",
+  "categories":["education","music"],
   "icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
