@@ -191,7 +191,7 @@ function route(name){
   if(name==="progress") renderProgress();
   window.scrollTo({top:0,behavior:"smooth"});
 }
-$("[data-route]").forEach(b=>b.addEventListener("click",()=>route(b.dataset.route)));
+$$("[data-route]").forEach(b=>b.addEventListener("click",()=>route(b.dataset.route)));
 
 function esc(value){
   return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
@@ -201,13 +201,13 @@ function esc(value){
 let currentTeacherLessonId=null;
 
 function setLearnView(view){
-  $("#learnTabs button").forEach(b=>b.classList.toggle("active",b.dataset.learnView===view));
-  $(".learn-view").forEach(v=>v.classList.toggle("active",v.id==="learn-"+view));
+  $$("#learnTabs button").forEach(b=>b.classList.toggle("active",b.dataset.learnView===view));
+  $$(".learn-view").forEach(v=>v.classList.toggle("active",v.id==="learn-"+view));
   $("#lessonPanel").classList.add("hidden");
   $("#learningPath").classList.remove("hidden");
   if(view==="teacher")renderTeacherLessons();
 }
-$("[data-learn-view]").forEach(b=>b.onclick=()=>setLearnView(b.dataset.learnView));
+$$("[data-learn-view]").forEach(b=>b.onclick=()=>setLearnView(b.dataset.learnView));
 
 function openTeacherLog(){
   route("learn");
@@ -324,10 +324,10 @@ function renderTeacherLessons(){
     </article>`;
   }).join("");
 
-  $("[data-teacher-hw]",list).forEach(b=>b.onclick=()=>toggleTeacherHomework(b.dataset.teacherHw,b.dataset.hwId));
-  $("[data-teacher-edit]",list).forEach(b=>b.onclick=()=>openTeacherForm(b.dataset.teacherEdit));
-  $("[data-teacher-practice]",list).forEach(b=>b.onclick=()=>openPractice("switch"));
-  $("[data-teacher-delete]",list).forEach(b=>b.onclick=()=>{
+  $$("[data-teacher-hw]",list).forEach(b=>b.onclick=()=>toggleTeacherHomework(b.dataset.teacherHw,b.dataset.hwId));
+  $$("[data-teacher-edit]",list).forEach(b=>b.onclick=()=>openTeacherForm(b.dataset.teacherEdit));
+  $$("[data-teacher-practice]",list).forEach(b=>b.onclick=()=>openPractice("switch"));
+  $$("[data-teacher-delete]",list).forEach(b=>b.onclick=()=>{
     const id=b.dataset.teacherDelete;
     if(confirm("確定刪除這堂課的筆記？")){
       state.teacherLessons=(state.teacherLessons||[]).filter(x=>x.id!==id);
@@ -350,7 +350,7 @@ function renderTeacherHomework(){
       <i></i>
       <span><strong>${esc(item.text)}</strong><small>${esc(item.date)} · ${esc(item.topic||"課堂作業")}</small></span>
     </button>`).join("");
-  $("[data-home-teacher-hw]",list).forEach(b=>b.onclick=()=>toggleTeacherHomework(b.dataset.homeTeacherHw,b.dataset.homeHwId));
+  $$("[data-home-teacher-hw]",list).forEach(b=>b.onclick=()=>toggleTeacherHomework(b.dataset.homeTeacherHw,b.dataset.homeHwId));
 }
 
 function renderDaily(){
@@ -621,9 +621,9 @@ function updateReferenceLabel(){
   else $("#referenceTone").textContent="播放 "+(tunerTarget?tunerTarget.name:"6弦 E")+" 參考音";
 }
 $("#guitarStrings").innerHTML=guitarStrings.map((x,i)=>`<button data-string="${i}">${x.name.replace("弦 ","")}</button>`).join("");
-$("[data-string]").forEach(b=>b.onclick=()=>{tunerTarget=guitarStrings[+b.dataset.string];$("#tunerMode").value="guitar";$("[data-string]").forEach(x=>x.classList.toggle("active",x===b));updateReferenceLabel();toast("目標："+tunerTarget.name)});
+$$("[data-string]").forEach(b=>b.onclick=()=>{tunerTarget=guitarStrings[+b.dataset.string];$("#tunerMode").value="guitar";$$("[data-string]").forEach(x=>x.classList.toggle("active",x===b));updateReferenceLabel();toast("目標："+tunerTarget.name)});
 $("#a4Calibration").oninput=e=>{$("#a4Value").textContent=e.target.value+" Hz";updateReferenceLabel()};
-$("#tunerMode").onchange=()=>{if($("#tunerMode").value==="chromatic"){$("[data-string]").forEach(x=>x.classList.remove("active"));tunerTarget=null}updateReferenceLabel()};
+$("#tunerMode").onchange=()=>{if($("#tunerMode").value==="chromatic"){$$("[data-string]").forEach(x=>x.classList.remove("active"));tunerTarget=null}updateReferenceLabel()};
 $("#referenceTone").onclick=()=>{const f=tunerTarget?calibratedFreq(tunerTarget.freq):currentA4();tone(f,.9,.2,"triangle")};
 function detectPitch(buf,sampleRate){
   let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);if(rms<.012)return-1;
