@@ -20,3 +20,19 @@
 - 資料預設只存在使用者裝置
 
 正式網站：<https://ykc1117.github.io/guitar-coach/>
+
+
+## V2.1 學習強化
+
+- 調音器新增 Guitar / Chromatic 模式
+- A4 430–450 Hz 校準
+- 六弦 / A4 參考音播放
+- 和弦進行自動推測可能調性
+- 耳訓新增「兩音音程」
+- 新增 0–12 格互動指板
+- 大調、自然小調、大小調五聲、Blues 音階顯示
+- 指板音符可點擊發聲
+
+### 開源專案研究來源
+
+本版有研究 Guitariz、GuitarBuddy、ChordMini、WebTuner 等公開專案的功能設計方向；實際程式碼以 Guitar Coach 自己的前端架構獨立實作。

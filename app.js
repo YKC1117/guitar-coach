@@ -257,6 +257,7 @@ function setTool(tool){
   $$(".tool-tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tooltab===tool));
   $$(".tool-view").forEach(v=>v.classList.toggle("active",v.id==="tool-"+tool));
   if(tool==="chords")renderChordLibrary();
+  if(tool==="fretboard")renderFretboard();
 }
 $$(".tool-tabs button").forEach(b=>b.onclick=()=>{stopTransientAudio();setTool(b.dataset.tooltab)});
 $$("[data-tool]").forEach(b=>b.onclick=()=>openTool(b.dataset.tool));
@@ -306,9 +307,29 @@ function parseProgression(){
   const raw=$("#progressionInput").value.trim().replace(/[,|]+/g," ");
   return raw.split(/\s+/).filter(Boolean).filter(c=>chords[c]);
 }
+
+const keyProfiles={
+  "C 大調 / Am 小調":["C","Dm","Em","F","G","Am"],
+  "G 大調 / Em 小調":["G","Am","B7","C","D","Em"],
+  "D 大調 / Bm 小調":["D","Em","F#m","G","A","Bm"],
+  "A 大調 / F#m 小調":["A","Bm","C#m","D","E","F#m"],
+  "E 大調 / C#m 小調":["E","F#m","G#m","A","B7","C#m"],
+  "F 大調 / Dm 小調":["F","Gm","Am","A7","Bb","C","Dm"]
+};
+function estimateKey(arr){
+  if(!arr.length)return null;
+  let best=null,bestScore=-1;
+  for(const [name,profile] of Object.entries(keyProfiles)){
+    let score=0;
+    arr.forEach(ch=>{if(profile.includes(ch))score+=1});
+    if(score>bestScore){bestScore=score;best=name}
+  }
+  return {name:best,confidence:Math.round(bestScore/arr.length*100)}
+}
 function renderProgressionPreview(){
   const arr=parseProgression();$("#progressionPreview").innerHTML=arr.map((c,i)=>`<span class="${i===progressionChordIndex?"active":""}">${c}</span>`).join("");
-  if(arr.length)$("#currentProgressionChord").textContent=arr[progressionChordIndex%arr.length]
+  if(arr.length)$("#currentProgressionChord").textContent=arr[progressionChordIndex%arr.length];
+  const key=estimateKey(arr);$("#detectedKey").textContent=key?key.name:"—";$("#keyConfidence").textContent=key?"（符合度 "+key.confidence+"%）":"";
 }
 $("#progressionInput").oninput=()=>{progressionChordIndex=0;renderProgressionPreview()};
 $("#progressionStart").onclick=()=>{
@@ -357,19 +378,66 @@ $("#rhythmToggle").onclick=()=>rhythmTimer?stopRhythm(true):startRhythm();
 $("#rhythmSlower").onclick=()=>{let v=+$("#rhythmBpm").value||70;v=Math.max(40,v-5);if(![...$("#rhythmBpm").options].some(o=>+o.value===v)){const o=document.createElement("option");o.value=o.textContent=v;$("#rhythmBpm").appendChild(o)}$("#rhythmBpm").value=v;if(rhythmTimer){stopRhythm(false);startRhythm()}toast("已調慢到 "+v+" BPM")};
 
 const guitarStrings=[{name:"6弦 E",freq:82.41},{name:"5弦 A",freq:110},{name:"4弦 D",freq:146.83},{name:"3弦 G",freq:196},{name:"2弦 B",freq:246.94},{name:"1弦 E",freq:329.63}];
-let earTarget=null;
-function newEarQuestion(){earTarget=guitarStrings[Math.floor(Math.random()*guitarStrings.length)];$("#earFeedback").textContent="聽完後選一條弦。";$$(".ear-options button").forEach(b=>b.classList.remove("correct","wrong"))}
-function playEar(){if(!earTarget)newEarQuestion();tone(earTarget.freq,.9,.22,"triangle")}
-$("#earOptions").innerHTML=guitarStrings.map((s,i)=>`<button data-ear="${i}">${s.name}</button>`).join("");
+let earMode="strings",earTarget=null;
+const intervalChoices=[
+  {name:"大二度",semi:2},{name:"大三度",semi:4},{name:"完全四度",semi:5},{name:"完全五度",semi:7},{name:"八度",semi:12}
+];
+function earBucket(){
+  if(!state.ear.modes){
+    state.ear.modes={
+      strings:{correct:state.ear.correct||0,total:state.ear.total||0},
+      intervals:{correct:0,total:0}
+    };
+  }
+  return state.ear.modes[earMode];
+}
+function renderEarOptions(){
+  if(earMode==="strings"){
+    $("#earTitle").textContent="聽音找弦";$("#earDescription").textContent="我會播放一個吉他空弦音，猜它是哪一條弦。";
+    $("#earOptions").innerHTML=guitarStrings.map((x,i)=>`<button data-ear-answer="${i}">${x.name}</button>`).join("");
+  }else{
+    $("#earTitle").textContent="兩音音程";$("#earDescription").textContent="會依序播放兩個音，猜第二個音和第一個音相差多遠。";
+    $("#earOptions").innerHTML=intervalChoices.map((x,i)=>`<button data-ear-answer="${i}">${x.name}</button>`).join("");
+  }
+  renderEarStats();
+}
+function newEarQuestion(){
+  earTarget=earMode==="strings"
+    ? guitarStrings[Math.floor(Math.random()*guitarStrings.length)]
+    : intervalChoices[Math.floor(Math.random()*intervalChoices.length)];
+  $("#earFeedback").textContent=earMode==="strings"?"聽完後選一條弦。":"聽兩個音的距離，再選答案。";
+  $$(".ear-options button").forEach(b=>b.classList.remove("correct","wrong"));
+}
+function playEar(){
+  if(!earTarget)newEarQuestion();
+  if(earMode==="strings"){tone(earTarget.freq,.9,.22,"triangle")}
+  else{
+    const root=196;
+    tone(root,.55,.2,"triangle");
+    setTimeout(()=>tone(root*Math.pow(2,earTarget.semi/12),.65,.2,"triangle"),650);
+  }
+}
 $("#playEarTone").onclick=()=>{if(!earTarget)newEarQuestion();playEar()};
-$$("[data-ear]").forEach(b=>b.onclick=()=>{
+$("#earOptions").onclick=e=>{
+  const b=e.target.closest("[data-ear-answer]");if(!b)return;
   if(!earTarget){newEarQuestion();playEar();return}
-  const guess=guitarStrings[+b.dataset.ear],correct=guess===earTarget;state.ear.total=(state.ear.total||0)+1;if(correct)state.ear.correct=(state.ear.correct||0)+1;
-  b.classList.add(correct?"correct":"wrong");$("#earFeedback").textContent=correct?"答對了："+earTarget.name:"答案是 "+earTarget.name+"。再聽一次記住它的高度。";
-  renderEarStats();saveState();setTimeout(()=>{newEarQuestion();playEar()},1200)
+  const idx=+b.dataset.earAnswer;
+  const correct=earMode==="strings"?guitarStrings[idx]===earTarget:intervalChoices[idx]===earTarget;
+  const bucket=earBucket();bucket.total++;if(correct)bucket.correct++;
+  state.ear.correct=(state.ear.modes.strings.correct||0)+(state.ear.modes.intervals.correct||0);
+  state.ear.total=(state.ear.modes.strings.total||0)+(state.ear.modes.intervals.total||0);
+  b.classList.add(correct?"correct":"wrong");
+  const answer=earTarget.name;
+  $("#earFeedback").textContent=correct?"答對了："+answer:"答案是 "+answer+"。再聽一次，把聲音差異記起來。";
+  renderEarStats();saveState();setTimeout(()=>{newEarQuestion();playEar()},1250)
+};
+$$("[data-ear-mode]").forEach(b=>b.onclick=()=>{
+  earMode=b.dataset.earMode;$$("[data-ear-mode]").forEach(x=>x.classList.toggle("active",x===b));earTarget=null;renderEarOptions();newEarQuestion()
 });
-function renderEarStats(){const c=state.ear.correct||0,t=state.ear.total||0;$("#earCorrect").textContent=c;$("#earTotal").textContent=t;$("#earRate").textContent=(t?Math.round(c/t*100):0)+"%"}
-
+function renderEarStats(){
+  const bucket=earBucket(),c=bucket.correct||0,t=bucket.total||0;
+  $("#earCorrect").textContent=c;$("#earTotal").textContent=t;$("#earRate").textContent=(t?Math.round(c/t*100):0)+"%";
+}
 let mediaRecorder=null,recordChunks=[],recordTimer=null,recordStarted=null,recordStream=null;
 $("#recordBtn").onclick=async()=>{
   try{
@@ -384,8 +452,17 @@ $("#stopRecordBtn").onclick=()=>{if(mediaRecorder&&mediaRecorder.state!=="inacti
 
 let tunerCtx=null,tunerAnalyser=null,tunerStream=null,tunerRaf=null,tunerBuffer=null,tunerTarget=null;
 const noteNames=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
-$("#guitarStrings").innerHTML=guitarStrings.map((s,i)=>`<button data-string="${i}">${s.name.replace("弦 ","")}</button>`).join("");
-$$("[data-string]").forEach(b=>b.onclick=()=>{tunerTarget=guitarStrings[+b.dataset.string];$$("[data-string]").forEach(x=>x.classList.toggle("active",x===b));toast("目標："+tunerTarget.name)});
+function currentA4(){return Math.max(430,Math.min(450,+$("#a4Calibration").value||440))}
+function calibratedFreq(base){return base*(currentA4()/440)}
+function updateReferenceLabel(){
+  if($("#tunerMode").value==="chromatic"&&!tunerTarget)$("#referenceTone").textContent="播放 A4 "+currentA4()+" Hz";
+  else $("#referenceTone").textContent="播放 "+(tunerTarget?tunerTarget.name:"6弦 E")+" 參考音";
+}
+$("#guitarStrings").innerHTML=guitarStrings.map((x,i)=>`<button data-string="${i}">${x.name.replace("弦 ","")}</button>`).join("");
+$("[data-string]").forEach(b=>b.onclick=()=>{tunerTarget=guitarStrings[+b.dataset.string];$("#tunerMode").value="guitar";$("[data-string]").forEach(x=>x.classList.toggle("active",x===b));updateReferenceLabel();toast("目標："+tunerTarget.name)});
+$("#a4Calibration").oninput=e=>{$("#a4Value").textContent=e.target.value+" Hz";updateReferenceLabel()};
+$("#tunerMode").onchange=()=>{if($("#tunerMode").value==="chromatic"){$("[data-string]").forEach(x=>x.classList.remove("active"));tunerTarget=null}updateReferenceLabel()};
+$("#referenceTone").onclick=()=>{const f=tunerTarget?calibratedFreq(tunerTarget.freq):currentA4();tone(f,.9,.2,"triangle")};
 function detectPitch(buf,sampleRate){
   let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);if(rms<.012)return-1;
   const minLag=Math.floor(sampleRate/500),maxLag=Math.min(Math.floor(sampleRate/60),buf.length-2);
@@ -398,14 +475,18 @@ function detectPitch(buf,sampleRate){
   return sampleRate/bestLag;
 }
 function noteFromFreq(freq){
-  const exact=69+12*Math.log2(freq/440),m=Math.round(exact),c=Math.round((exact-m)*100),oct=Math.floor(m/12)-1;
+  const exact=69+12*Math.log2(freq/currentA4()),m=Math.round(exact),c=Math.round((exact-m)*100),oct=Math.floor(m/12)-1;
   return {name:noteNames[(m%12+12)%12]+oct,cents:c}
 }
 function tunerTick(){
   tunerAnalyser.getFloatTimeDomainData(tunerBuffer);const f=detectPitch(tunerBuffer,tunerCtx.sampleRate);
   if(f>60&&f<500){
     const n=noteFromFreq(f);let cents=n.cents,name=n.name;
-    if(tunerTarget){cents=Math.round(1200*Math.log2(f/tunerTarget.freq));while(cents>50)cents-=1200;while(cents<-50)cents+=1200;name=tunerTarget.name.split(" ").at(-1)}
+    let target=$("#tunerMode").value==="guitar"?tunerTarget:null;
+    if($("#tunerMode").value==="guitar"&&!target){
+      target=guitarStrings.reduce((best,x)=>Math.abs(1200*Math.log2(f/calibratedFreq(x.freq)))<Math.abs(1200*Math.log2(f/calibratedFreq(best.freq)))?x:best,guitarStrings[0]);
+    }
+    if(target){cents=Math.round(1200*Math.log2(f/calibratedFreq(target.freq)));name=target.name.split(" ").at(-1)}
     cents=Math.max(-50,Math.min(50,cents));$("#tunerNote").textContent=name;$("#tunerFreq").textContent=f.toFixed(1)+" Hz";$("#tunerNeedle").style.transform="translateX("+cents*2+"px)";
     if(Math.abs(cents)<=5){$("#tunerStatus").textContent="音準很好";$("#tunerStatus").style.color="#2f7d5c"}else{$("#tunerStatus").textContent=(cents<0?"偏低 ":"偏高 ")+Math.abs(cents)+" cents";$("#tunerStatus").style.color="#a86b1b"}
   }else{$("#tunerFreq").textContent="請撥一條弦";$("#tunerStatus").textContent="等待聲音"}
@@ -448,6 +529,34 @@ function openChordDetail(name){$("#chordLibrary").parentElement.classList.add("h
 $("#closeChordDetail").onclick=()=>{$("#chordDetail").classList.add("hidden");$("#chordLibrary").parentElement.classList.remove("hidden")};
 $("#chordSearch").oninput=renderChordLibrary;$("#chordDifficulty").onchange=renderChordLibrary;
 
+
+const scaleRoots=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const scalePatterns={
+  major:[0,2,4,5,7,9,11],
+  minor:[0,2,3,5,7,8,10],
+  pentatonicMajor:[0,2,4,7,9],
+  pentatonicMinor:[0,3,5,7,10],
+  blues:[0,3,5,6,7,10]
+};
+const openMidi=[40,45,50,55,59,64];
+$("#scaleRoot").innerHTML=scaleRoots.map((n,i)=>`<option value="${i}" ${n==="C"?"selected":""}>${n}</option>`).join("");
+function renderFretboard(){
+  const root=+$("#scaleRoot").value||0,pattern=scalePatterns[$("#scaleType").value]||scalePatterns.major;
+  const pcs=new Set(pattern.map(i=>(root+i)%12));
+  $("#scaleNotes").innerHTML=pattern.map(i=>{const pc=(root+i)%12;return `<span class="scale-note ${pc===root?"root":""}">${scaleRoots[pc]}</span>`}).join("");
+  let html="";
+  const labels=["6E","5A","4D","3G","2B","1E"];
+  openMidi.forEach((midi,stringIndex)=>{
+    html+=`<div class="fret-string-label">${labels[stringIndex]}</div>`;
+    for(let fret=0;fret<=12;fret++){
+      const noteMidi=midi+fret,pc=((noteMidi%12)+12)%12,note=scaleRoots[pc],active=pcs.has(pc),rootClass=pc===root;
+      html+=`<button class="fret-cell ${fret===0?"open":""} ${active?"in-scale":""} ${rootClass?"root":""}" data-fret-midi="${noteMidi}" title="${note} / 第 ${fret} 格"><span>${note}</span></button>`;
+    }
+  });
+  $("#fretboardGrid").innerHTML=html;
+}
+$("#scaleRoot").onchange=renderFretboard;$("#scaleType").onchange=renderFretboard;
+$("#fretboardGrid").onclick=e=>{const cell=e.target.closest("[data-fret-midi]");if(!cell)return;const midi=+cell.dataset.fretMidi;const freq=currentA4()*Math.pow(2,(midi-69)/12);tone(freq,.7,.16,"triangle")};
 function renderWeek(){
   const days=[];let total=0;
   for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=localDateKey(d),min=state.days[k]?.minutes||0;total+=min;days.push({d,k,min,today:i===0})}
@@ -500,6 +609,9 @@ newSwitchSequence();
 renderPatterns();
 renderProgressionPreview();
 renderChordLibrary();
+renderFretboard();
+renderEarOptions();
 newEarQuestion();
+updateReferenceLabel();
 renderShared();
 })();
