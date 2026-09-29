@@ -758,3 +758,89 @@ audio{width:100%;margin-top:14px}
   .teacher-homework-item{grid-template-columns:28px 1fr auto}
   .homework-go{padding:0 8px}
 }
+
+
+/* Teacher media attachments v3.4 */
+.lesson-media-block{
+  margin:12px 0;padding:12px;border-radius:12px;
+  background:#0d1118;border:1px solid rgba(255,255,255,.045)
+}
+.lesson-media-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px
+}
+.lesson-media-head small{display:block;margin-top:3px;color:#667185;font-size:8px;line-height:1.45}
+.media-local-note{
+  flex:0 0 auto;padding:5px 7px;border-radius:999px;
+  background:rgba(86,196,154,.08);color:#6fc9a5;font-size:8px
+}
+.lesson-media-actions{display:flex;gap:7px;flex-wrap:wrap}
+.media-action{
+  min-height:34px;display:inline-flex;align-items:center;justify-content:center;
+  padding:0 11px;border-radius:10px;border:1px solid var(--line);
+  background:#171c27;color:#8f9aac;font-size:9px;font-weight:760;cursor:pointer
+}
+.media-action:hover{background:#1d2330}
+.media-action input{display:none}
+.teacher-recording-status{
+  display:flex;align-items:center;gap:8px;margin-top:9px;padding:9px 10px;
+  border-radius:10px;background:rgba(255,122,122,.06);color:#d78b8b;font-size:9px
+}
+.teacher-recording-status i{
+  width:8px;height:8px;border-radius:50%;background:#ff7373;
+  box-shadow:0 0 0 6px rgba(255,115,115,.08);animation:pulse 1.2s infinite
+}
+.teacher-recording-status strong{margin-left:auto;color:#d9a2a2}
+.teacher-media-preview{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px
+}
+.media-empty{
+  grid-column:1/-1;min-height:62px;display:grid;place-items:center;
+  border:1px dashed rgba(255,255,255,.08);border-radius:10px;
+  color:#5f697c;font-size:9px
+}
+.media-preview-item{
+  position:relative;overflow:hidden;border-radius:10px;
+  background:#151a24;border:1px solid var(--line)
+}
+.media-preview-item.image{aspect-ratio:4/3}
+.media-preview-item.image a,.media-preview-item.image img{
+  width:100%;height:100%;display:block
+}
+.media-preview-item.image img{object-fit:cover}
+.media-preview-item.audio{
+  grid-column:span 2;min-height:74px;padding:10px;padding-top:32px
+}
+.media-preview-item.audio audio{width:100%;margin:0}
+.media-preview-item>button{
+  position:absolute;right:6px;top:6px;width:25px;height:25px;
+  border-radius:50%;border:1px solid rgba(255,255,255,.12);
+  background:rgba(9,11,16,.82);color:#fff;font-size:14px;line-height:1
+}
+.media-help{margin:8px 0 0;color:#5e687a;font-size:8px;line-height:1.45}
+
+.teacher-record-media{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px
+}
+.record-media-image{
+  display:block;overflow:hidden;border-radius:10px;aspect-ratio:4/3;
+  border:1px solid var(--line);background:#151a24
+}
+.record-media-image img{width:100%;height:100%;display:block;object-fit:cover}
+.record-media-audio{
+  grid-column:1/-1;padding:9px;border-radius:10px;background:#171c27
+}
+.record-media-audio span{
+  display:block;margin-bottom:6px;color:#7f8a9d;font-size:8px;font-weight:760
+}
+.record-media-audio audio{width:100%;margin:0}
+
+@media(max-width:760px){
+  .teacher-media-preview,.teacher-record-media{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .media-preview-item.audio{grid-column:1/-1}
+}
+@media(max-width:520px){
+  .lesson-media-head{flex-direction:column}
+  .teacher-media-preview,.teacher-record-media{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lesson-media-actions{display:grid;grid-template-columns:1fr 1fr}
+  .media-action{width:100%}
+}

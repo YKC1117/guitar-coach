@@ -10,7 +10,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <title>Guitar Coach｜吉他學習教練</title>
-  <link rel="stylesheet" href="./styles.css?v=3.3.0">
+  <link rel="stylesheet" href="./styles.css?v=3.4.0">
 </head>
 <body>
 <div class="app-shell">
@@ -180,6 +180,29 @@
           <div class="teacher-two-col">
             <label class="field"><span>老師提醒 / 關鍵重點</span><textarea id="teacherNotes" rows="5" placeholder="例如：G 換 C 時食指先定位；右手不要停…"></textarea></label>
             <label class="field"><span>我今天卡住的地方</span><textarea id="teacherProblem" rows="5" placeholder="例如：F 還壓不乾淨、換 G 會慢半拍…"></textarea></label>
+          </div>
+
+          <div class="lesson-media-block">
+            <div class="lesson-media-head">
+              <div>
+                <span class="quick-note-label">老師示範 / 上課附件</span>
+                <small>拍手型、板書或教材，也可以錄一小段老師示範。</small>
+              </div>
+              <span class="media-local-note">只存在這台裝置</span>
+            </div>
+            <div class="lesson-media-actions">
+              <label class="media-action">
+                <span>＋ 照片</span>
+                <input type="file" id="teacherPhotoInput" accept="image/*" capture="environment" multiple>
+              </label>
+              <button class="media-action" id="teacherAudioRecord" type="button">● 錄示範</button>
+              <button class="media-action hidden" id="teacherAudioStop" type="button">■ 停止錄音</button>
+            </div>
+            <div class="teacher-recording-status hidden" id="teacherRecordingStatus">
+              <i></i><span>錄音中</span><strong id="teacherRecordingTime">00:00</strong>
+            </div>
+            <div class="teacher-media-preview" id="teacherMediaPreview"></div>
+            <p class="media-help">照片與錄音不會上傳雲端；目前 JSON 備份只包含文字紀錄，不包含媒體附件。</p>
           </div>
 
           <div class="homework-builder">
@@ -481,6 +504,6 @@
   </nav>
   <div class="toast" id="toast"></div>
 </div>
-<script src="./app.js?v=3.3.0"></script>
+<script src="./app.js?v=3.4.0"></script>
 </body>
 </html>

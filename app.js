@@ -15,6 +15,91 @@ const defaultState = {
 let state = loadState();
 let deferredInstall = null;
 
+const MEDIA_DB_NAME="guitarCoachMediaV1";
+const MEDIA_STORE="lessonMedia";
+let mediaDbPromise=null;
+const mediaUrls=new Map();
+
+function openMediaDb(){
+  if(!("indexedDB" in window))return Promise.reject(new Error("IndexedDB unavailable"));
+  if(mediaDbPromise)return mediaDbPromise;
+  mediaDbPromise=new Promise((resolve,reject)=>{
+    const req=indexedDB.open(MEDIA_DB_NAME,1);
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains(MEDIA_STORE)){
+        const store=db.createObjectStore(MEDIA_STORE,{keyPath:"id"});
+        store.createIndex("lessonId","lessonId",{unique:false});
+      }
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||new Error("IndexedDB open failed"));
+  });
+  return mediaDbPromise;
+}
+async function putLessonMedia(item){
+  const db=await openMediaDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(MEDIA_STORE,"readwrite");
+    tx.objectStore(MEDIA_STORE).put(item);
+    tx.oncomplete=()=>resolve(item);
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+async function getLessonMedia(lessonId){
+  if(!lessonId)return[];
+  const db=await openMediaDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(MEDIA_STORE,"readonly");
+    const req=tx.objectStore(MEDIA_STORE).index("lessonId").getAll(lessonId);
+    req.onsuccess=()=>resolve((req.result||[]).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)));
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function deleteLessonMediaItem(id){
+  const db=await openMediaDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(MEDIA_STORE,"readwrite");
+    tx.objectStore(MEDIA_STORE).delete(id);
+    tx.oncomplete=()=>{
+      const url=mediaUrls.get(id);if(url)URL.revokeObjectURL(url);mediaUrls.delete(id);resolve();
+    };
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+async function deleteLessonMediaForLesson(lessonId){
+  const items=await getLessonMedia(lessonId);
+  await Promise.all(items.map(x=>deleteLessonMediaItem(x.id)));
+}
+async function clearAllLessonMedia(){
+  try{
+    const db=await openMediaDb();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(MEDIA_STORE,"readwrite");
+      tx.objectStore(MEDIA_STORE).clear();
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+    });
+    mediaUrls.forEach(url=>URL.revokeObjectURL(url));mediaUrls.clear();
+  }catch(e){}
+}
+function mediaUrl(item){
+  if(mediaUrls.has(item.id))return mediaUrls.get(item.id);
+  const url=URL.createObjectURL(item.blob);mediaUrls.set(item.id,url);return url;
+}
+async function compressTeacherPhoto(file){
+  try{
+    const bitmap=await createImageBitmap(file);
+    const max=1600,scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height));
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    canvas.getContext("2d").drawImage(bitmap,0,0,canvas.width,canvas.height);
+    bitmap.close?.();
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/jpeg",.82));
+    return blob||file;
+  }catch(e){return file}
+}
+
 function localDateKey(d=new Date()){
   const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
   return y+"-"+m+"-"+day;
@@ -200,6 +285,12 @@ function esc(value){
 
 /* Teacher lesson log */
 let currentTeacherLessonId=null;
+let currentTeacherMediaOwner=null;
+let teacherMediaRecorder=null;
+let teacherMediaStream=null;
+let teacherMediaChunks=[];
+let teacherMediaStartedAt=0;
+let teacherMediaTimer=null;
 
 function setLearnView(view){
   $$("#learnTabs button").forEach(b=>b.classList.toggle("active",b.dataset.learnView===view));
@@ -233,6 +324,7 @@ function writeTeacherDraft(){
     problem:$("#teacherProblem").value.trim(),
     homeworkText:$("#teacherHomework").value,
     tags:[...teacherSelectedTags],
+    mediaOwner:currentTeacherMediaOwner,
     savedAt:Date.now()
   };
   localStorage.setItem(TEACHER_DRAFT_KEY,JSON.stringify(draft));
@@ -274,20 +366,24 @@ function openTeacherForm(id=null,seed=null){
   currentTeacherLessonId=id;
   const record=id?(state.teacherLessons||[]).find(x=>x.id===id):null;
   let data=record||seed||null;
+  let draft=null;
   if(!data&&!id){
-    const draft=readTeacherDraft();
+    draft=readTeacherDraft();
     if(draft)data=draft;
   }
+  currentTeacherMediaOwner=record?.id||data?.mediaOwner||("class-"+Date.now());
   $("#teacherLessonForm").classList.remove("hidden");
   $("#teacherLessonEmpty").classList.add("hidden");
   $("#teacherFormTitle").textContent=record?"編輯課堂筆記":"新增課堂筆記";
   fillTeacherForm(data||{date:localDateKey()});
   const status=$("#teacherDraftStatus");
-  if(status)status.textContent=(!record&&readTeacherDraft())?"已恢復上次未儲存草稿":"會自動暫存，不怕上課中途關掉。";
+  if(status)status.textContent=(!record&&draft)?"已恢復上次未儲存草稿":"會自動暫存，不怕上課中途關掉。";
+  renderTeacherMediaPreview();
   $("#teacherLessonForm").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function closeTeacherForm(){
   if(!$("#teacherLessonForm"))return;
+  stopTeacherAudioRecording();
   writeTeacherDraft();
   currentTeacherLessonId=null;
   $("#teacherLessonForm").classList.add("hidden");
@@ -336,6 +432,175 @@ $$("#teacherLessonForm input, #teacherLessonForm textarea, #teacherLessonForm se
   el.addEventListener("change",scheduleTeacherDraft);
 });
 
+
+async function renderTeacherMediaPreview(){
+  const box=$("#teacherMediaPreview");
+  if(!box||!currentTeacherMediaOwner)return;
+  try{
+    const items=await getLessonMedia(currentTeacherMediaOwner);
+    box.replaceChildren();
+    if(!items.length){
+      const empty=document.createElement("div");
+      empty.className="media-empty";
+      empty.textContent="還沒有照片或錄音";
+      box.appendChild(empty);
+      return;
+    }
+    items.forEach(item=>{
+      const wrap=document.createElement("div");
+      wrap.className="media-preview-item "+item.type;
+      const url=mediaUrl(item);
+      if(item.type==="image"){
+        const a=document.createElement("a");
+        a.href=url;a.target="_blank";a.rel="noopener";
+        const img=document.createElement("img");
+        img.src=url;img.alt="課堂照片";
+        a.appendChild(img);wrap.appendChild(a);
+      }else{
+        const audio=document.createElement("audio");
+        audio.controls=true;audio.preload="metadata";audio.src=url;
+        wrap.appendChild(audio);
+      }
+      const del=document.createElement("button");
+      del.type="button";del.textContent="×";del.setAttribute("aria-label","刪除附件");
+      del.addEventListener("click",async()=>{
+        await deleteLessonMediaItem(item.id);
+        renderTeacherMediaPreview();renderTeacherLessons();
+        toast("附件已刪除");
+      });
+      wrap.appendChild(del);
+      box.appendChild(wrap);
+    });
+  }catch(e){
+    box.innerHTML='<div class="media-empty">這個瀏覽器目前無法使用本機附件。</div>';
+  }
+}
+
+$("#teacherPhotoInput")?.addEventListener("change",async e=>{
+  const files=[...(e.target.files||[])].filter(f=>f.type.startsWith("image/"));
+  if(!files.length)return;
+  if(!currentTeacherMediaOwner)currentTeacherMediaOwner="class-"+Date.now();
+  try{
+    const existing=await getLessonMedia(currentTeacherMediaOwner);
+    const room=Math.max(0,12-existing.length);
+    for(const file of files.slice(0,room)){
+      const blob=await compressTeacherPhoto(file);
+      await putLessonMedia({
+        id:"media-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),
+        lessonId:currentTeacherMediaOwner,
+        type:"image",
+        blob,
+        mimeType:blob.type||file.type,
+        name:file.name||"課堂照片",
+        createdAt:Date.now()
+      });
+    }
+    if(files.length>room)toast("每堂課最多保留 12 個附件");
+    else toast("照片已加入這堂課");
+    writeTeacherDraft();
+    renderTeacherMediaPreview();
+  }catch(err){
+    toast("照片儲存失敗，請確認瀏覽器儲存空間");
+  }
+  e.target.value="";
+});
+
+function stopTeacherAudioRecording(){
+  if(teacherMediaRecorder&&teacherMediaRecorder.state!=="inactive")teacherMediaRecorder.stop();
+}
+$("#teacherAudioRecord")?.addEventListener("click",async()=>{
+  if(!navigator.mediaDevices?.getUserMedia||!("MediaRecorder" in window)){
+    toast("這個瀏覽器不支援直接錄音");return;
+  }
+  if(!currentTeacherMediaOwner)currentTeacherMediaOwner="class-"+Date.now();
+  try{
+    teacherMediaStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    teacherMediaChunks=[];
+    const candidates=["audio/mp4","audio/webm;codecs=opus","audio/webm"];
+    const mime=candidates.find(x=>MediaRecorder.isTypeSupported?.(x))||"";
+    teacherMediaRecorder=new MediaRecorder(teacherMediaStream,mime?{mimeType:mime}:undefined);
+    teacherMediaRecorder.ondataavailable=e=>{if(e.data.size)teacherMediaChunks.push(e.data)};
+    teacherMediaRecorder.onstop=async()=>{
+      clearInterval(teacherMediaTimer);
+      teacherMediaStream?.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(teacherMediaChunks,{type:teacherMediaRecorder.mimeType||"audio/webm"});
+      if(blob.size){
+        try{
+          await putLessonMedia({
+            id:"media-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),
+            lessonId:currentTeacherMediaOwner,
+            type:"audio",
+            blob,
+            mimeType:blob.type,
+            name:"老師示範錄音",
+            createdAt:Date.now()
+          });
+          toast("示範錄音已加入這堂課");
+          writeTeacherDraft();
+          renderTeacherMediaPreview();
+        }catch(e){
+          toast("錄音儲存失敗");
+        }
+      }
+      $("#teacherAudioRecord")?.classList.remove("hidden");
+      $("#teacherAudioStop")?.classList.add("hidden");
+      $("#teacherRecordingStatus")?.classList.add("hidden");
+      if($("#teacherRecordingTime"))$("#teacherRecordingTime").textContent="00:00";
+      teacherMediaRecorder=null;teacherMediaStream=null;teacherMediaChunks=[];
+    };
+    teacherMediaRecorder.start();
+    teacherMediaStartedAt=Date.now();
+    $("#teacherAudioRecord").classList.add("hidden");
+    $("#teacherAudioStop").classList.remove("hidden");
+    $("#teacherRecordingStatus").classList.remove("hidden");
+    teacherMediaTimer=setInterval(()=>{
+      const sec=Math.floor((Date.now()-teacherMediaStartedAt)/1000);
+      $("#teacherRecordingTime").textContent=formatClock(sec);
+      if(sec>=180){
+        stopTeacherAudioRecording();
+        toast("示範錄音已達 3 分鐘，自動停止");
+      }
+    },250);
+  }catch(e){
+    toast("請允許瀏覽器使用麥克風");
+  }
+});
+$("#teacherAudioStop")?.addEventListener("click",stopTeacherAudioRecording);
+
+async function renderTeacherRecordMedia(records){
+  const list=$("#teacherLessonList");
+  if(!list)return;
+  for(const r of records){
+    const host=$$("[data-lesson-media-id]",list).find(el=>el.dataset.lessonMediaId===r.id);
+    if(!host)continue;
+    try{
+      const items=await getLessonMedia(r.id);
+      host.replaceChildren();
+      if(!items.length){host.classList.add("hidden");continue}
+      host.classList.remove("hidden");
+      items.forEach(item=>{
+        const url=mediaUrl(item);
+        if(item.type==="image"){
+          const a=document.createElement("a");
+          a.className="record-media-image";a.href=url;a.target="_blank";a.rel="noopener";
+          const img=document.createElement("img");
+          img.src=url;img.alt="課堂附件";a.appendChild(img);host.appendChild(a);
+        }else{
+          const wrap=document.createElement("div");
+          wrap.className="record-media-audio";
+          const label=document.createElement("span");
+          label.textContent="老師示範";
+          const audio=document.createElement("audio");
+          audio.controls=true;audio.preload="metadata";audio.src=url;
+          wrap.append(label,audio);host.appendChild(wrap);
+        }
+      });
+    }catch(e){
+      host.replaceChildren();
+    }
+  }
+}
+
 $("#saveTeacherLesson")?.addEventListener("click",()=>{
   const date=$("#teacherLessonDate").value||localDateKey();
   const topic=$("#teacherTopic").value.trim();
@@ -348,7 +613,7 @@ $("#saveTeacherLesson")?.addEventListener("click",()=>{
 
   const existing=currentTeacherLessonId?(state.teacherLessons||[]).find(x=>x.id===currentTeacherLessonId):null;
   const oldByText=new Map((existing?.homework||[]).map(x=>[x.text,x]));
-  const id=existing?.id||("class-"+Date.now());
+  const id=existing?.id||currentTeacherMediaOwner||("class-"+Date.now());
   const homework=homeworkLines.map((text,i)=>{
     const old=oldByText.get(text);
     return {id:old?.id||(id+"-hw-"+i+"-"+Date.now()),text,done:old?.done||false};
@@ -430,6 +695,7 @@ function renderTeacherLessons(){
       ${chips.length?`<div class="teacher-chips">${chips.map(x=>`<span>${esc(x)}</span>`).join("")}</div>`:""}
       ${r.notes?`<div class="teacher-notes"><b>老師提醒</b>${esc(r.notes).replace(/\n/g,"<br>")}</div>`:""}
       ${r.problem?`<div class="teacher-problem"><b>我卡住</b>${esc(r.problem).replace(/\n/g,"<br>")}</div>`:""}
+      <div class="teacher-record-media hidden" data-lesson-media-id="${esc(r.id)}"></div>
       ${hw.length?`<div class="record-homework">
         <span class="record-label">回家作業</span>
         ${hw.map(item=>`<div class="record-homework-row ${item.done?"done":""}">
@@ -445,6 +711,7 @@ function renderTeacherLessons(){
       </div>
     </article>`;
   }).join("");
+  renderTeacherRecordMedia(records);
 
   $$("[data-teacher-hw]",list).forEach(b=>b.onclick=()=>toggleTeacherHomework(b.dataset.teacherHw,b.dataset.hwId));
   $$("[data-homework-practice]",list).forEach(b=>b.onclick=()=>practiceFromHomework(b.dataset.homeworkPractice));
@@ -454,7 +721,8 @@ function renderTeacherLessons(){
     const id=b.dataset.teacherDelete;
     if(confirm("確定刪除這堂課的筆記？")){
       state.teacherLessons=(state.teacherLessons||[]).filter(x=>x.id!==id);
-      saveState();setLearnView("teacher");toast("課堂筆記已刪除");
+      deleteLessonMediaForLesson(id).catch(()=>{});
+      saveState();setLearnView("teacher");toast("課堂筆記與附件已刪除");
     }
   });
 }
@@ -878,7 +1146,7 @@ $("#importData").onchange=async e=>{
   try{const obj=JSON.parse(await f.text());state=deepMerge(structuredClone(defaultState),obj);saveState();toast("備份已匯入")}catch(err){toast("這個備份檔無法讀取")}
   e.target.value=""
 };
-$("#resetData").onclick=()=>{if(confirm("確定清除所有 Guitar Coach 練習紀錄？這無法復原。")){state=structuredClone(defaultState);localStorage.removeItem(STORE_KEY);saveState();toast("紀錄已清除")}};
+$("#resetData").onclick=()=>{if(confirm("確定清除所有 Guitar Coach 練習紀錄與課堂附件？這無法復原。")){state=structuredClone(defaultState);localStorage.removeItem(STORE_KEY);localStorage.removeItem(TEACHER_DRAFT_KEY);clearAllLessonMedia();saveState();toast("紀錄與本機附件已清除")}};
 
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;$("#installBtn").classList.remove("hidden")});
 $("#installBtn").onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;$("#installBtn").classList.add("hidden")};
@@ -889,7 +1157,7 @@ function stopTransientAudio(){
   if(progressionTimer)stopProgression(true);
   if(tunerStream)stopTuner();
 }
-window.addEventListener("pagehide",()=>{finishSwitchSession();stopTransientAudio()});
+window.addEventListener("pagehide",()=>{finishSwitchSession();stopTransientAudio();stopTeacherAudioRecording();mediaUrls.forEach(url=>URL.revokeObjectURL(url));mediaUrls.clear()});
 
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 
