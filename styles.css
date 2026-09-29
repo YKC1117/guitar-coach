@@ -529,3 +529,135 @@ audio{width:100%;margin-top:14px}
   .achievement-grid{grid-template-columns:1fr}
   .fretboard-grid{min-width:640px}
 }
+
+
+/* Teacher lesson log */
+.section-action{
+  min-height:34px;border:0;background:transparent;color:#9aa5b8;
+  font-size:10px;padding:0
+}
+.teacher-homework-list{display:grid;gap:7px}
+.teacher-homework-item{
+  min-height:58px;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;
+  width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.045);
+  border-radius:13px;background:rgba(255,255,255,.025);color:inherit;text-align:left
+}
+.teacher-homework-item:hover{background:rgba(255,255,255,.045)}
+.teacher-homework-item i{
+  width:27px;height:27px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--line-2);font-style:normal
+}
+.teacher-homework-item strong{display:block;font-size:11px;line-height:1.4}
+.teacher-homework-item small{display:block;margin-top:3px;color:#697487;font-size:8px}
+
+.learn-tabs{
+  width:min(100%,var(--content-narrow));margin:0 auto 14px;padding:4px;
+  display:grid;grid-template-columns:1fr 1fr;gap:4px;
+  border-radius:13px;background:#11151e
+}
+.learn-tabs button{
+  min-height:36px;border:0;border-radius:9px;background:transparent;
+  color:#737d90;font-size:10px;font-weight:760
+}
+.learn-tabs button.active{background:#202635;color:#fff}
+.learn-view{display:none}
+.learn-view.active{display:block;animation:pageIn .16s ease}
+
+.teacher-summary{
+  width:min(100%,var(--content-narrow));margin:0 auto 12px;
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:18px;border-radius:16px;background:#111620;border:1px solid var(--line)
+}
+.teacher-summary h2{margin:5px 0 4px;font-size:20px;letter-spacing:-.03em}
+.teacher-summary p{margin:0;max-width:540px;color:#7e899b;font-size:10px;line-height:1.55}
+.teacher-summary .primary{flex:0 0 auto}
+
+.teacher-form{
+  width:min(100%,var(--content-narrow));margin:0 auto 12px;
+  padding:20px;border-radius:18px;background:#111620;border:1px solid rgba(125,140,255,.16);
+  box-shadow:0 16px 40px rgba(0,0,0,.14)
+}
+.form-title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.form-title h2{margin:5px 0 0;font-size:20px;letter-spacing:-.03em}
+.close-form{
+  width:34px;height:34px;border-radius:10px;border:1px solid var(--line);
+  background:#171c27;color:#8b95a6;font-size:18px
+}
+.teacher-form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.full-field{display:block;margin-top:10px}
+.teacher-form .field input,
+.teacher-form .field select,
+.teacher-form .field textarea{
+  width:100%;border:1px solid var(--line-2);background:#0d1118;color:#edf1f8;
+  border-radius:10px;padding:11px;resize:vertical
+}
+.teacher-form .field input,.teacher-form .field select{height:var(--control-h)}
+.teacher-form .field textarea{min-height:96px;line-height:1.55}
+.teacher-form .field span{display:block;margin-bottom:5px;color:#6f7a8d;font-size:9px}
+.form-help{margin:8px 0 0;color:#667185;font-size:9px;line-height:1.55}
+
+.teacher-log{
+  width:min(100%,var(--content-narrow));margin:0 auto;
+  display:grid;gap:9px
+}
+.teacher-record{
+  padding:17px;border-radius:16px;background:#111620;border:1px solid var(--line)
+}
+.teacher-record-head{
+  display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start
+}
+.teacher-date{color:#8490a4;font-size:9px}
+.teacher-record h3{margin:5px 0 4px;font-size:16px;letter-spacing:-.02em}
+.teacher-record-head p{margin:0;color:#697488;font-size:9px}
+.homework-progress{
+  min-width:42px;padding:6px 8px;border-radius:999px;text-align:center;
+  background:rgba(125,140,255,.10);color:#9aa6ff;font-size:9px;font-weight:800
+}
+.teacher-notes{
+  margin-top:12px;padding:12px;border-radius:11px;
+  background:#171c27;color:#98a2b3;font-size:10px;line-height:1.65
+}
+.record-homework{display:grid;gap:5px;margin-top:12px}
+.record-label{color:#697488;font-size:8px;letter-spacing:.13em;font-weight:800}
+.record-homework-item{
+  min-height:42px;width:100%;display:grid;grid-template-columns:24px 1fr;gap:9px;align-items:center;
+  padding:7px 9px;border:0;border-radius:10px;background:#171c27;color:#dce1eb;text-align:left
+}
+.record-homework-item i{
+  width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--line-2);font-style:normal;font-size:9px
+}
+.record-homework-item span{font-size:10px;line-height:1.4}
+.record-homework-item.done{opacity:.45}
+.record-homework-item.done span{text-decoration:line-through}
+.record-homework-item.done i{background:#7481ef;color:#fff;border-color:#7481ef}
+.record-actions{display:flex;gap:6px;margin-top:12px}
+.record-actions button{
+  min-height:32px;padding:0 10px;border-radius:9px;border:1px solid var(--line);
+  background:transparent;color:#8590a2;font-size:9px
+}
+.record-actions button:hover{background:#171c27}
+.record-actions button.delete{margin-left:auto;color:#bf7a7a}
+
+.teacher-empty{
+  width:min(100%,var(--content-narrow));margin:0 auto;
+  min-height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:28px;border:1px dashed rgba(255,255,255,.10);border-radius:18px;text-align:center
+}
+.teacher-empty-icon{
+  width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
+  background:#171c27;color:#7d8cff;font-size:20px
+}
+.teacher-empty strong{margin-top:12px;font-size:13px}
+.teacher-empty p{max-width:360px;margin:6px 0 14px;color:#6f798c;font-size:10px;line-height:1.6}
+
+@media(max-width:760px){
+  .teacher-summary{align-items:flex-start;flex-direction:column}
+  .teacher-summary .primary{width:100%}
+  .teacher-form-grid{grid-template-columns:1fr}
+}
+@media(max-width:520px){
+  .teacher-record{padding:14px}
+  .record-actions{flex-wrap:wrap}
+  .record-actions button.delete{margin-left:0}
+}
