@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <title>Guitar Coach｜吉他學習教練</title>
-  <link rel="stylesheet" href="./styles.css?v=3.5.1">
+  <link rel="stylesheet" href="./styles.css?v=3.6.0">
 </head>
 <body>
 <div class="app-shell">
@@ -78,6 +78,22 @@
           </div>
           <button class="section-action" id="openTeacherLogFromHome">查看課堂筆記</button>
         </div>
+
+        <div class="teacher-homework-overview" id="teacherHomeworkOverview">
+          <div class="teacher-homework-progress">
+            <div class="teacher-progress-ring" id="teacherProgressRing">
+              <strong id="teacherProgressPercent">0%</strong>
+            </div>
+            <div>
+              <span class="teacher-overview-label">老師作業進度</span>
+              <strong id="teacherPendingSummary">尚未有作業</strong>
+              <small id="teacherNextLessonSummary">完成課堂紀錄後會顯示下次上課。</small>
+            </div>
+          </div>
+          <button class="primary" id="startTeacherHomework">開始老師作業</button>
+        </div>
+
+        <div class="teacher-progress-track"><i id="teacherProgressBar"></i></div>
         <div class="teacher-homework-list" id="teacherHomeworkList"></div>
       </section>
 
@@ -568,6 +584,6 @@
   </nav>
   <div class="toast" id="toast"></div>
 </div>
-<script src="./app.js?v=3.5.1"></script>
+<script src="./app.js?v=3.6.0"></script>
 </body>
 </html>

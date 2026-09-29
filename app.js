@@ -757,15 +757,33 @@ function renderTeacherLessons(){
 }
 
 function renderTeacherHomework(){
+  const records=teacherRecords();
   const pending=[];
-  teacherRecords().forEach(r=>(r.homework||[]).forEach(item=>{
+  let totalHomework=0;
+  records.forEach(r=>(r.homework||[]).forEach(item=>{
+    totalHomework++;
     if(!item.done)pending.push({lessonId:r.id,homeworkId:item.id,text:item.text,date:r.date,topic:r.topic||r.song});
   }));
+  const doneHomework=Math.max(0,totalHomework-pending.length);
+  const homeworkPct=totalHomework?Math.round(doneHomework/totalHomework*100):0;
+  const today=new Date();today.setHours(0,0,0,0);
+  const upcoming=records.filter(r=>r.nextDate).map(r=>{
+    const p=r.nextDate.split("-").map(Number);
+    const d=new Date(p[0],p[1]-1,p[2]);d.setHours(0,0,0,0);
+    return {record:r,days:Math.round((d-today)/86400000)};
+  }).filter(x=>x.days>=0).sort((a,b)=>a.days-b.days)[0]||null;
   const section=$("#teacherHomeworkSection"),list=$("#teacherHomeworkList");
   if(!section||!list)return;
-  section.classList.toggle("hidden",pending.length===0);
-  if(!pending.length){list.innerHTML="";return}
-  list.innerHTML=pending.slice(0,6).map(item=>`
+  section.classList.toggle("hidden",records.length===0);
+  const pctEl=$("#teacherProgressPercent"),summaryEl=$("#teacherPendingSummary"),nextEl=$("#teacherNextLessonSummary"),barEl=$("#teacherProgressBar"),ringEl=$("#teacherProgressRing"),startEl=$("#startTeacherHomework");
+  if(pctEl)pctEl.textContent=totalHomework?homeworkPct+"%":"—";
+  if(summaryEl)summaryEl.textContent=totalHomework?(pending.length?"還有 "+pending.length+" 項未完成":"老師作業已全部完成"):"這堂課沒有設定回家作業";
+  if(nextEl)nextEl.textContent=!upcoming?"尚未設定下次上課日期":upcoming.days===0?"今天上課 · "+upcoming.record.nextDate:upcoming.days===1?"明天上課 · "+upcoming.record.nextDate:"距離下次上課 "+upcoming.days+" 天 · "+upcoming.record.nextDate;
+  if(barEl)barEl.style.width=(totalHomework?homeworkPct:0)+"%";
+  if(ringEl)ringEl.style.setProperty("--teacher-p",totalHomework?homeworkPct:0);
+  if(startEl){startEl.disabled=!pending.length;startEl.textContent=pending.length?"開始老師作業":"作業已完成";startEl.onclick=()=>{if(pending[0])practiceFromHomework(pending[0].text)}}
+  if(!pending.length){list.innerHTML='<div class="teacher-homework-empty"><strong>這次老師作業完成了</strong><span>可以在下次上課前再複習一次課堂筆記。</span></div>';return}
+  list.innerHTML=pending.slice(0,8).map(item=>`
     <div class="teacher-homework-item">
       <button class="homework-check" data-home-teacher-hw="${esc(item.lessonId)}" data-home-hw-id="${esc(item.homeworkId)}"><i></i></button>
       <span><strong>${esc(item.text)}</strong><small>${esc(item.date)} · ${esc(item.topic||"課堂作業")}</small></span>
