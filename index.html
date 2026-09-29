@@ -10,7 +10,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <title>Guitar Coach｜吉他學習教練</title>
-  <link rel="stylesheet" href="./styles.css?v=3.2.2">
+  <link rel="stylesheet" href="./styles.css?v=3.3.0">
 </head>
 <body>
 <div class="app-shell">
@@ -137,10 +137,13 @@
         <article class="teacher-summary">
           <div>
             <span class="kicker">LESSON LOG</span>
-            <h2>上完課，2 分鐘記下來。</h2>
-            <p>把老師今天教的內容與回家作業記錄起來，作業會自動出現在首頁。</p>
+            <h2>上完課，快速記重點。</h2>
+            <p>老師今天教什麼、哪裡卡住、回家要練什麼，全部集中在這裡。</p>
           </div>
-          <button class="primary" id="newTeacherLesson">＋ 新增今天上課</button>
+          <div class="teacher-summary-actions">
+            <button class="secondary" id="repeatLastTeacherLesson">帶入上堂資料</button>
+            <button class="primary" id="newTeacherLesson">＋ 新增今天上課</button>
+          </div>
         </article>
 
         <article class="teacher-form hidden" id="teacherLessonForm">
@@ -148,19 +151,56 @@
             <div><span class="kicker">CLASS NOTE</span><h2 id="teacherFormTitle">新增課堂筆記</h2></div>
             <button class="close-form" id="closeTeacherForm">×</button>
           </div>
+
+          <div class="quick-note-block">
+            <span class="quick-note-label">今天主要練什麼？</span>
+            <div class="lesson-tag-picker" id="lessonTagPicker">
+              <button data-lesson-tag="和弦">和弦</button>
+              <button data-lesson-tag="換和弦">換和弦</button>
+              <button data-lesson-tag="刷弦">刷弦</button>
+              <button data-lesson-tag="節奏">節奏</button>
+              <button data-lesson-tag="歌曲">歌曲</button>
+              <button data-lesson-tag="指法">指法</button>
+              <button data-lesson-tag="樂理">樂理</button>
+              <button data-lesson-tag="技巧">技巧</button>
+            </div>
+          </div>
+
           <div class="teacher-form-grid">
             <label class="field"><span>上課日期</span><input type="date" id="teacherLessonDate"></label>
-            <label class="field"><span>老師（可不填）</span><input id="teacherName" placeholder="例如：王老師"></label>
+            <label class="field"><span>老師</span><input id="teacherName" placeholder="例如：王老師"></label>
             <label class="field"><span>上課時間</span><select id="teacherDuration"><option value="30">30 分</option><option value="45">45 分</option><option value="60" selected>60 分</option><option value="90">90 分</option><option value="120">120 分</option></select></label>
-            <label class="field"><span>下次上課（可不填）</span><input type="date" id="nextLessonDate"></label>
+            <label class="field"><span>下次上課</span><input type="date" id="nextLessonDate"></label>
+            <label class="field"><span>歌曲 / 教材</span><input id="teacherSong" placeholder="例如：披星戴月的想你"></label>
+            <label class="field"><span>目標速度</span><div class="input-suffix"><input id="teacherBpm" type="number" min="30" max="240" placeholder="70"><span>BPM</span></div></label>
           </div>
-          <label class="field full-field"><span>今天學什麼</span><input id="teacherTopic" placeholder="例如：C/G/Am/F、右手八拍刷法、告五人某首歌"></label>
-          <label class="field full-field"><span>老師提醒 / 上課重點</span><textarea id="teacherNotes" rows="5" placeholder="例如：G 換 C 時食指先定位；右手不要停；第 2 拍不要刷太重…"></textarea></label>
-          <label class="field full-field"><span>回家作業（一行一項）</span><textarea id="teacherHomework" rows="5" placeholder="例如：&#10;C ↔ G 每天 20 次&#10;70 BPM 練八拍刷法 10 分鐘&#10;練習歌曲前兩段"></textarea></label>
-          <p class="form-help">每一行會變成一個可勾選的回家練習項目，首頁也會同步顯示。</p>
-          <div class="button-row">
-            <button class="secondary" id="cancelTeacherLesson">取消</button>
-            <button class="primary" id="saveTeacherLesson">儲存課堂筆記</button>
+
+          <label class="field full-field"><span>今天學什麼</span><input id="teacherTopic" placeholder="例如：C/G/Am/F、八拍刷法、主歌前兩段"></label>
+
+          <div class="teacher-two-col">
+            <label class="field"><span>老師提醒 / 關鍵重點</span><textarea id="teacherNotes" rows="5" placeholder="例如：G 換 C 時食指先定位；右手不要停…"></textarea></label>
+            <label class="field"><span>我今天卡住的地方</span><textarea id="teacherProblem" rows="5" placeholder="例如：F 還壓不乾淨、換 G 會慢半拍…"></textarea></label>
+          </div>
+
+          <div class="homework-builder">
+            <div class="homework-builder-head">
+              <div><span class="quick-note-label">回家要練什麼？</span><small>點一下就加入，也可以自己打</small></div>
+            </div>
+            <div class="homework-presets" id="homeworkPresets">
+              <button data-homework-preset="和弦切換 20 次">和弦切換 20 次</button>
+              <button data-homework-preset="節拍器 70 BPM 練 10 分鐘">70 BPM × 10 分鐘</button>
+              <button data-homework-preset="逐弦檢查和弦乾淨度 5 分鐘">逐弦檢查 5 分鐘</button>
+              <button data-homework-preset="今天歌曲練 15 分鐘">歌曲 15 分鐘</button>
+            </div>
+            <label class="field full-field"><textarea id="teacherHomework" rows="5" placeholder="一行一項，例如：&#10;C ↔ G 每天 20 次&#10;八拍刷法 70 BPM 10 分鐘&#10;歌曲主歌練到不卡"></textarea></label>
+          </div>
+
+          <div class="teacher-form-bottom">
+            <span class="draft-status" id="teacherDraftStatus">會自動暫存，不怕上課中途關掉。</span>
+            <div class="button-row">
+              <button class="secondary" id="cancelTeacherLesson">取消</button>
+              <button class="primary" id="saveTeacherLesson">儲存課堂筆記</button>
+            </div>
           </div>
         </article>
 
@@ -441,6 +481,6 @@
   </nav>
   <div class="toast" id="toast"></div>
 </div>
-<script src="./app.js?v=3.2.2"></script>
+<script src="./app.js?v=3.3.0"></script>
 </body>
 </html>

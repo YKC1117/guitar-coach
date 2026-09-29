@@ -4,6 +4,7 @@
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const STORE_KEY = "guitarCoachV2";
+const TEACHER_DRAFT_KEY = "guitarCoachTeacherDraftV1";
 const defaultState = {
   version:2, days:{}, totalMinutes:0, totalSwitches:0, tunerSessions:0,
   bestSwitch:null, lessons:{}, ear:{correct:0,total:0}, practiceSessions:0,
@@ -215,25 +216,79 @@ function openTeacherLog(){
 }
 $("#openTeacherLogFromHome")?.addEventListener("click",openTeacherLog);
 
-function openTeacherForm(id=null){
+function readTeacherDraft(){
+  try{return JSON.parse(localStorage.getItem(TEACHER_DRAFT_KEY)||"null")}catch(e){return null}
+}
+function writeTeacherDraft(){
+  if(!$("#teacherLessonForm")||$("#teacherLessonForm").classList.contains("hidden"))return;
+  const draft={
+    date:$("#teacherLessonDate").value||localDateKey(),
+    teacher:$("#teacherName").value.trim(),
+    duration:+$("#teacherDuration").value||60,
+    nextDate:$("#nextLessonDate").value||"",
+    song:$("#teacherSong").value.trim(),
+    bpm:+$("#teacherBpm").value||null,
+    topic:$("#teacherTopic").value.trim(),
+    notes:$("#teacherNotes").value.trim(),
+    problem:$("#teacherProblem").value.trim(),
+    homeworkText:$("#teacherHomework").value,
+    tags:[...teacherSelectedTags],
+    savedAt:Date.now()
+  };
+  localStorage.setItem(TEACHER_DRAFT_KEY,JSON.stringify(draft));
+  const status=$("#teacherDraftStatus");
+  if(status){
+    const t=new Date();
+    status.textContent="已自動暫存 "+String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0");
+  }
+}
+let teacherDraftTimer=null;
+let teacherSelectedTags=new Set();
+function scheduleTeacherDraft(){
+  clearTimeout(teacherDraftTimer);
+  teacherDraftTimer=setTimeout(writeTeacherDraft,350);
+}
+function renderTeacherTags(){
+  $$("#lessonTagPicker [data-lesson-tag]").forEach(b=>b.classList.toggle("active",teacherSelectedTags.has(b.dataset.lessonTag)));
+}
+
+function fillTeacherForm(data={}){
+  $("#teacherLessonDate").value=data.date||localDateKey();
+  $("#teacherName").value=data.teacher||"";
+  $("#teacherDuration").value=String(data.duration||60);
+  $("#nextLessonDate").value=data.nextDate||"";
+  $("#teacherSong").value=data.song||"";
+  $("#teacherBpm").value=data.bpm||"";
+  $("#teacherTopic").value=data.topic||"";
+  $("#teacherNotes").value=data.notes||"";
+  $("#teacherProblem").value=data.problem||"";
+  $("#teacherHomework").value=data.homeworkText!==undefined
+    ? data.homeworkText
+    : (data.homework||[]).map(x=>x.text).join("\n");
+  teacherSelectedTags=new Set(Array.isArray(data.tags)?data.tags:[]);
+  renderTeacherTags();
+}
+
+function openTeacherForm(id=null,seed=null){
   if(!$("#teacherLessonForm"))return;
   currentTeacherLessonId=id;
   const record=id?(state.teacherLessons||[]).find(x=>x.id===id):null;
+  let data=record||seed||null;
+  if(!data&&!id){
+    const draft=readTeacherDraft();
+    if(draft)data=draft;
+  }
   $("#teacherLessonForm").classList.remove("hidden");
   $("#teacherLessonEmpty").classList.add("hidden");
   $("#teacherFormTitle").textContent=record?"編輯課堂筆記":"新增課堂筆記";
-  $("#teacherLessonDate").value=record?.date||localDateKey();
-  $("#teacherName").value=record?.teacher||"";
-  $("#teacherDuration").value=String(record?.duration||60);
-  $("#nextLessonDate").value=record?.nextDate||"";
-  $("#teacherTopic").value=record?.topic||"";
-  $("#teacherNotes").value=record?.notes||"";
-  $("#teacherHomework").value=(record?.homework||[]).map(x=>x.text).join("\n");
-  $("#teacherTopic").focus();
+  fillTeacherForm(data||{date:localDateKey()});
+  const status=$("#teacherDraftStatus");
+  if(status)status.textContent=(!record&&readTeacherDraft())?"已恢復上次未儲存草稿":"會自動暫存，不怕上課中途關掉。";
   $("#teacherLessonForm").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function closeTeacherForm(){
   if(!$("#teacherLessonForm"))return;
+  writeTeacherDraft();
   currentTeacherLessonId=null;
   $("#teacherLessonForm").classList.add("hidden");
   renderTeacherLessons();
@@ -243,12 +298,53 @@ $("#emptyNewTeacherLesson")?.addEventListener("click",()=>openTeacherForm());
 $("#closeTeacherForm")?.addEventListener("click",closeTeacherForm);
 $("#cancelTeacherLesson")?.addEventListener("click",closeTeacherForm);
 
+$("#repeatLastTeacherLesson")?.addEventListener("click",()=>{
+  const last=teacherRecords()[0];
+  if(!last){toast("目前還沒有上一堂課可以帶入");return}
+  openTeacherForm(null,{
+    date:localDateKey(),
+    teacher:last.teacher||"",
+    duration:last.duration||60,
+    song:last.song||"",
+    bpm:last.bpm||"",
+    topic:last.topic||"",
+    notes:"",
+    problem:"",
+    tags:last.tags||[],
+    homeworkText:(last.homework||[]).filter(x=>!x.done).map(x=>x.text).join("\n")
+  });
+  toast("已帶入上堂資料，可直接修改");
+});
+
+$$("#lessonTagPicker [data-lesson-tag]").forEach(b=>b.addEventListener("click",()=>{
+  const tag=b.dataset.lessonTag;
+  teacherSelectedTags.has(tag)?teacherSelectedTags.delete(tag):teacherSelectedTags.add(tag);
+  renderTeacherTags();scheduleTeacherDraft();
+}));
+
+$$("#homeworkPresets [data-homework-preset]").forEach(b=>b.addEventListener("click",()=>{
+  const text=b.dataset.homeworkPreset;
+  const box=$("#teacherHomework");
+  const lines=box.value.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  if(!lines.includes(text))lines.push(text);
+  box.value=lines.join("\n");
+  scheduleTeacherDraft();
+}));
+
+$$("#teacherLessonForm input, #teacherLessonForm textarea, #teacherLessonForm select").forEach(el=>{
+  el.addEventListener("input",scheduleTeacherDraft);
+  el.addEventListener("change",scheduleTeacherDraft);
+});
+
 $("#saveTeacherLesson")?.addEventListener("click",()=>{
   const date=$("#teacherLessonDate").value||localDateKey();
   const topic=$("#teacherTopic").value.trim();
   const notes=$("#teacherNotes").value.trim();
+  const problem=$("#teacherProblem").value.trim();
+  const song=$("#teacherSong").value.trim();
+  const bpm=+$("#teacherBpm").value||null;
   const homeworkLines=$("#teacherHomework").value.split(/\n+/).map(x=>x.trim()).filter(Boolean);
-  if(!topic&&!notes&&!homeworkLines.length){toast("至少記一項今天學的內容或回家作業");return}
+  if(!topic&&!notes&&!problem&&!song&&!homeworkLines.length){toast("至少記一項今天學的內容或回家作業");return}
 
   const existing=currentTeacherLessonId?(state.teacherLessons||[]).find(x=>x.id===currentTeacherLessonId):null;
   const oldByText=new Map((existing?.homework||[]).map(x=>[x.text,x]));
@@ -263,25 +359,27 @@ $("#saveTeacherLesson")?.addEventListener("click",()=>{
     teacher:$("#teacherName").value.trim(),
     duration:+$("#teacherDuration").value||60,
     nextDate:$("#nextLessonDate").value||"",
-    topic,notes,homework,
+    song,bpm,topic,notes,problem,
+    tags:[...teacherSelectedTags],
+    homework,
     createdAt:existing?.createdAt||Date.now(),
     updatedAt:Date.now()
   };
   if(!Array.isArray(state.teacherLessons))state.teacherLessons=[];
   const idx=state.teacherLessons.findIndex(x=>x.id===id);
   if(idx>=0)state.teacherLessons[idx]=record;else state.teacherLessons.push(record);
+  localStorage.removeItem(TEACHER_DRAFT_KEY);
   currentTeacherLessonId=null;
   $("#teacherLessonForm").classList.add("hidden");
   saveState();
   setLearnView("teacher");
-  toast(existing?"課堂筆記已更新":"課堂筆記已儲存，作業已放到首頁");
+  toast(existing?"課堂筆記已更新":"已儲存，回家作業也放到首頁");
 });
 
 function teacherRecords(){
   if(!Array.isArray(state.teacherLessons))state.teacherLessons=[];
   return [...state.teacherLessons].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.createdAt||0)-(a.createdAt||0));
 }
-
 function toggleTeacherHomework(lessonId,homeworkId){
   const lesson=(state.teacherLessons||[]).find(x=>x.id===lessonId);
   const item=lesson?.homework?.find(x=>x.id===homeworkId);
@@ -290,6 +388,22 @@ function toggleTeacherHomework(lessonId,homeworkId){
   lesson.updatedAt=Date.now();
   saveState();
   toast(item.done?"作業完成":"已恢復為未完成");
+}
+function practiceFromHomework(text=""){
+  const t=text.toLowerCase();
+  if(/調音|音準/.test(text)){openTool("tuner");return}
+  if(/節拍器|bpm/.test(t)){openTool("metronome");return}
+  if(/刷弦|節奏|八拍|十六拍/.test(text)){openPractice("rhythm");return}
+  if(/和弦切換|換和弦|↔/.test(text)){openPractice("switch");return}
+  if(/歌曲|主歌|副歌|和弦進行/.test(text)){openPractice("progression");return}
+  openPractice("switch");
+}
+function lessonSummaryChips(r){
+  const chips=[];
+  (r.tags||[]).forEach(x=>chips.push(x));
+  if(r.song)chips.push(r.song);
+  if(r.bpm)chips.push(r.bpm+" BPM");
+  return chips.slice(0,6);
 }
 
 function renderTeacherLessons(){
@@ -302,22 +416,30 @@ function renderTeacherLessons(){
   list.innerHTML=records.map(r=>{
     const hw=r.homework||[],done=hw.filter(x=>x.done).length;
     const teacher=r.teacher?esc(r.teacher):"老師課程";
+    const chips=lessonSummaryChips(r);
+    const firstPending=hw.find(x=>!x.done);
     return `<article class="teacher-record">
       <div class="teacher-record-head">
         <div>
           <span class="teacher-date">${esc(r.date||"")}</span>
-          <h3>${esc(r.topic||"課堂筆記")}</h3>
+          <h3>${esc(r.topic||r.song||"課堂筆記")}</h3>
           <p>${teacher} · ${Number(r.duration)||60} 分鐘${r.nextDate?" · 下次 "+esc(r.nextDate):""}</p>
         </div>
         <span class="homework-progress">${done}/${hw.length}</span>
       </div>
-      ${r.notes?`<div class="teacher-notes">${esc(r.notes).replace(/\n/g,"<br>")}</div>`:""}
+      ${chips.length?`<div class="teacher-chips">${chips.map(x=>`<span>${esc(x)}</span>`).join("")}</div>`:""}
+      ${r.notes?`<div class="teacher-notes"><b>老師提醒</b>${esc(r.notes).replace(/\n/g,"<br>")}</div>`:""}
+      ${r.problem?`<div class="teacher-problem"><b>我卡住</b>${esc(r.problem).replace(/\n/g,"<br>")}</div>`:""}
       ${hw.length?`<div class="record-homework">
         <span class="record-label">回家作業</span>
-        ${hw.map(item=>`<button class="record-homework-item ${item.done?"done":""}" data-teacher-hw="${esc(r.id)}" data-hw-id="${esc(item.id)}"><i>${item.done?"✓":""}</i><span>${esc(item.text)}</span></button>`).join("")}
+        ${hw.map(item=>`<div class="record-homework-row ${item.done?"done":""}">
+          <button class="homework-check" data-teacher-hw="${esc(r.id)}" data-hw-id="${esc(item.id)}"><i>${item.done?"✓":""}</i></button>
+          <span>${esc(item.text)}</span>
+          <button class="homework-go" data-homework-practice="${esc(item.text)}">練習</button>
+        </div>`).join("")}
       </div>`:""}
       <div class="record-actions">
-        <button data-teacher-practice="${esc(r.id)}">去練習室</button>
+        ${firstPending?`<button data-teacher-practice-text="${esc(firstPending.text)}">開始未完成作業</button>`:""}
         <button data-teacher-edit="${esc(r.id)}">編輯</button>
         <button class="delete" data-teacher-delete="${esc(r.id)}">刪除</button>
       </div>
@@ -325,8 +447,9 @@ function renderTeacherLessons(){
   }).join("");
 
   $$("[data-teacher-hw]",list).forEach(b=>b.onclick=()=>toggleTeacherHomework(b.dataset.teacherHw,b.dataset.hwId));
+  $$("[data-homework-practice]",list).forEach(b=>b.onclick=()=>practiceFromHomework(b.dataset.homeworkPractice));
+  $$("[data-teacher-practice-text]",list).forEach(b=>b.onclick=()=>practiceFromHomework(b.dataset.teacherPracticeText));
   $$("[data-teacher-edit]",list).forEach(b=>b.onclick=()=>openTeacherForm(b.dataset.teacherEdit));
-  $$("[data-teacher-practice]",list).forEach(b=>b.onclick=()=>openPractice("switch"));
   $$("[data-teacher-delete]",list).forEach(b=>b.onclick=()=>{
     const id=b.dataset.teacherDelete;
     if(confirm("確定刪除這堂課的筆記？")){
@@ -339,18 +462,20 @@ function renderTeacherLessons(){
 function renderTeacherHomework(){
   const pending=[];
   teacherRecords().forEach(r=>(r.homework||[]).forEach(item=>{
-    if(!item.done)pending.push({lessonId:r.id,homeworkId:item.id,text:item.text,date:r.date,topic:r.topic});
+    if(!item.done)pending.push({lessonId:r.id,homeworkId:item.id,text:item.text,date:r.date,topic:r.topic||r.song});
   }));
   const section=$("#teacherHomeworkSection"),list=$("#teacherHomeworkList");
   if(!section||!list)return;
   section.classList.toggle("hidden",pending.length===0);
   if(!pending.length){list.innerHTML="";return}
   list.innerHTML=pending.slice(0,6).map(item=>`
-    <button class="teacher-homework-item" data-home-teacher-hw="${esc(item.lessonId)}" data-home-hw-id="${esc(item.homeworkId)}">
-      <i></i>
+    <div class="teacher-homework-item">
+      <button class="homework-check" data-home-teacher-hw="${esc(item.lessonId)}" data-home-hw-id="${esc(item.homeworkId)}"><i></i></button>
       <span><strong>${esc(item.text)}</strong><small>${esc(item.date)} · ${esc(item.topic||"課堂作業")}</small></span>
-    </button>`).join("");
+      <button class="homework-go" data-home-practice="${esc(item.text)}">練習</button>
+    </div>`).join("");
   $$("[data-home-teacher-hw]",list).forEach(b=>b.onclick=()=>toggleTeacherHomework(b.dataset.homeTeacherHw,b.dataset.homeHwId));
+  $$("[data-home-practice]",list).forEach(b=>b.onclick=()=>practiceFromHomework(b.dataset.homePractice));
 }
 
 function renderDaily(){
