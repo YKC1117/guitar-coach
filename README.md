@@ -81,3 +81,16 @@
 - 媒體附件持續使用 IndexedDB，直接佔用本機瀏覽器可用空間
 - 顯示目前網站儲存使用量 / 瀏覽器提供的配額
 - 支援的瀏覽器會嘗試申請 persistent storage，降低資料被系統回收的機率
+
+
+## Privacy Guard
+
+Guitar Coach 採 local-first 隱私架構：
+
+- 課堂筆記與練習紀錄：LocalStorage
+- 課堂照片與錄音：IndexedDB / Blob
+- 不使用第三方分析碼、廣告 SDK 或雲端同步
+- Runtime 不允許外部 URL、fetch、XHR、WebSocket、EventSource、sendBeacon
+- 瀏覽器 CSP 設為 connect-src 'none'，頁面本身禁止對外 API 連線
+- Service Worker 只允許 fetch(e.request) 取得目前網站資源
+- scripts/privacy-guard.mjs 會在 GitHub Actions 每次 push / PR 自動檢查
