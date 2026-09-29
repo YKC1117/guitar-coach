@@ -881,11 +881,7 @@ function renderTeacherPrep(){
     return {record:r,days:Math.round((d-today)/86400000)};
   }).filter(x=>x.days>=0).sort((a,b)=>a.days-b.days)[0]||null;
 
-  section.classList.toggle("hidden",pending.length===0&&!upcoming);
-  if(pending.length===0&&!upcoming){
-    list.replaceChildren();
-    return;
-  }
+  section.classList.remove("hidden");
 
   const dateEl=$("#teacherPrepDate");
   const summaryEl=$("#teacherPrepSummary");
@@ -908,7 +904,9 @@ function renderTeacherPrep(){
   if(!pending.length){
     const empty=document.createElement("div");
     empty.className="teacher-question-empty";
-    empty.textContent="問題都處理完了。上課前再快速看一次課堂筆記就好。";
+    empty.textContent=records.length
+      ?"目前沒有待問問題。可以打開課堂筆記，把今天卡住的地方加入「下次想問老師」。"
+      :"還沒有課堂紀錄。上完第一堂課後，可以在這裡準備下次要問老師的問題。";
     list.appendChild(empty);
     return;
   }
