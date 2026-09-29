@@ -1193,6 +1193,74 @@ function humanBytes(bytes){
   return (bytes/1024/1024/1024).toFixed(2)+" GB";
 }
 
+let pendingFullRestore=null;
+
+async function sha256Hex(text){
+  if(!globalThis.crypto?.subtle)return null;
+  const bytes=new TextEncoder().encode(text);
+  const digest=await crypto.subtle.digest("SHA-256",bytes);
+  return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+function dataUrlByteSize(dataUrl){
+  if(typeof dataUrl!=="string")return 0;
+  const comma=dataUrl.indexOf(",");
+  if(comma<0)return 0;
+  const head=dataUrl.slice(0,comma),body=dataUrl.slice(comma+1);
+  if(head.includes(";base64")){
+    const padding=body.endsWith("==")?2:body.endsWith("=")?1:0;
+    return Math.max(0,Math.floor(body.length*3/4)-padding);
+  }
+  try{return new TextEncoder().encode(decodeURIComponent(body)).length}catch(e){return body.length}
+}
+function validateBackupShape(obj){
+  if(!obj||obj.format!=="guitar-coach-full-backup")throw new Error("不是 Guitar Coach 完整備份");
+  if(![1,2].includes(obj.version))throw new Error("不支援的備份版本");
+  if(!obj.appState||typeof obj.appState!=="object")throw new Error("缺少學習資料");
+  if(!Array.isArray(obj.media))throw new Error("附件格式錯誤");
+  for(const item of obj.media){
+    if(!item||typeof item!=="object")throw new Error("附件資料損壞");
+    if(!["image","audio"].includes(item.type))throw new Error("附件類型錯誤");
+    if(typeof item.data!=="string"||!item.data.startsWith("data:"))throw new Error("附件內容不完整");
+    if(!item.lessonId)throw new Error("附件缺少課堂識別");
+  }
+  return true;
+}
+function resetRestorePreview(){
+  pendingFullRestore=null;
+  $("#restorePreview")?.classList.add("hidden");
+  $("#confirmFullRestore").disabled=true;
+  $("#importFullBackup").value="";
+}
+function renderRestorePreview(obj,fileName,integrity,mediaBytes){
+  pendingFullRestore=obj;
+  $("#restorePreview").classList.remove("hidden");
+  $("#restoreFileName").textContent=fileName||"完整備份";
+  $("#restoreDate").textContent=obj.createdAt?new Date(obj.createdAt).toLocaleString("zh-TW"):"未記錄";
+  $("#restoreLessons").textContent=String((obj.appState.teacherLessons||[]).length);
+  $("#restorePhotos").textContent=String(obj.media.filter(x=>x.type==="image").length);
+  $("#restoreAudio").textContent=String(obj.media.filter(x=>x.type==="audio").length);
+  $("#restoreMediaSize").textContent=humanBytes(mediaBytes);
+  $("#restoreMinutes").textContent=String(obj.appState.totalMinutes||0)+" 分";
+  const badge=$("#restoreIntegrity"),note=$("#restorePreviewNote"),confirm=$("#confirmFullRestore");
+  badge.classList.remove("ok","warn","bad");
+  if(integrity==="verified"){
+    badge.textContent="完整性驗證通過";
+    badge.classList.add("ok");
+    note.textContent="備份內容完整。確認內容正確後再還原；按下確認前不會修改目前裝置資料。";
+    confirm.disabled=false;
+  }else if(integrity==="legacy"){
+    badge.textContent="舊版備份";
+    badge.classList.add("warn");
+    note.textContent="這是舊版完整備份，沒有 SHA-256 完整性碼；格式檢查通過，可以還原。";
+    confirm.disabled=false;
+  }else{
+    badge.textContent="完整性驗證失敗";
+    badge.classList.add("bad");
+    note.textContent="備份檔可能已損壞或被修改，為避免覆蓋目前資料，已禁止還原。";
+    confirm.disabled=true;
+  }
+}
+
 $("#exportFullBackup")?.addEventListener("click",async()=>{
   const btn=$("#exportFullBackup"),status=$("#fullBackupStatus");
   btn.disabled=true;
@@ -1205,83 +1273,65 @@ $("#exportFullBackup")?.addEventListener("click",async()=>{
       const item=items[i];
       rawBytes+=item.blob?.size||0;
       if(status)status.textContent="正在打包附件 "+(i+1)+" / "+items.length+"…";
-      media.push({
-        id:item.id,
-        lessonId:item.lessonId,
-        type:item.type,
-        mimeType:item.mimeType||item.blob?.type||"",
-        name:item.name||"",
-        createdAt:item.createdAt||Date.now(),
-        data:await blobToDataUrl(item.blob)
-      });
+      media.push({id:item.id,lessonId:item.lessonId,type:item.type,mimeType:item.mimeType||item.blob?.type||"",name:item.name||"",createdAt:item.createdAt||Date.now(),data:await blobToDataUrl(item.blob)});
     }
-    const payload={
-      format:"guitar-coach-full-backup",
-      version:1,
-      createdAt:new Date().toISOString(),
-      appState:state,
-      media
-    };
+    if(status)status.textContent="正在建立完整性驗證碼…";
+    const signedBody=JSON.stringify({appState:state,media});
+    const checksum=await sha256Hex(signedBody);
+    const payload={format:"guitar-coach-full-backup",version:2,createdAt:new Date().toISOString(),integrity:{algorithm:checksum?"SHA-256":"none",checksum:checksum||null},appState:state,media};
     const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");
-    a.href=url;
-    a.download="guitar-coach-full-"+localDateKey()+".guitarcoach";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    a.href=url;a.download="guitar-coach-full-"+localDateKey()+".guitarcoach";document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1200);
-    if(status)status.textContent="完整備份完成："+items.length+" 個附件，約 "+humanBytes(rawBytes)+"（原始附件大小）";
+    if(status)status.textContent="完整備份完成："+items.length+" 個附件，約 "+humanBytes(rawBytes)+"；"+(checksum?"SHA-256 已驗證":"此瀏覽器未提供 SHA-256");
     toast("完整本機備份已匯出");
   }catch(e){
     if(status)status.textContent="完整備份失敗，請確認裝置可用空間後再試。";
     toast("完整備份失敗");
-  }finally{
-    btn.disabled=false;
-  }
+  }finally{btn.disabled=false}
 });
 
 $("#importFullBackup")?.addEventListener("change",async e=>{
-  const file=e.target.files?.[0];
-  if(!file)return;
-  const status=$("#fullBackupStatus");
+  const file=e.target.files?.[0];if(!file)return;
+  const status=$("#fullBackupStatus");pendingFullRestore=null;$("#confirmFullRestore").disabled=true;
   try{
-    if(status)status.textContent="正在讀取完整備份…";
-    const obj=JSON.parse(await file.text());
-    if(!obj||obj.format!=="guitar-coach-full-backup"||obj.version!==1||!obj.appState||!Array.isArray(obj.media)){
-      throw new Error("Unsupported backup");
-    }
-    if(!confirm("完整還原會以備份內容取代這台裝置目前的 Guitar Coach 資料與課堂附件。確定繼續？")){
-      if(status)status.textContent="已取消完整還原。";
-      e.target.value="";
-      return;
-    }
-    await clearAllLessonMedia();
-    for(let i=0;i<obj.media.length;i++){
-      const item=obj.media[i];
-      if(status)status.textContent="正在還原附件 "+(i+1)+" / "+obj.media.length+"…";
-      await putLessonMedia({
-        id:item.id||("media-"+Date.now()+"-"+i),
-        lessonId:item.lessonId,
-        type:item.type,
-        blob:dataUrlToBlob(item.data),
-        mimeType:item.mimeType||"",
-        name:item.name||"",
-        createdAt:item.createdAt||Date.now()
-      });
-    }
-    state=deepMerge(structuredClone(defaultState),obj.appState);
-    localStorage.setItem(STORE_KEY,JSON.stringify(state));
-    localStorage.removeItem(TEACHER_DRAFT_KEY);
-    renderShared();
-    refreshTeacherStorageUsage();
-    if(status)status.textContent="完整還原完成："+obj.media.length+" 個附件。";
-    toast("完整備份已還原");
+    if(status)status.textContent="正在檢查完整備份…";
+    const obj=JSON.parse(await file.text());validateBackupShape(obj);
+    let mediaBytes=0;for(const item of obj.media)mediaBytes+=dataUrlByteSize(item.data);
+    let integrity="legacy";
+    if(obj.version===2&&obj.integrity?.algorithm==="SHA-256"&&obj.integrity?.checksum){
+      if(status)status.textContent="正在驗證 SHA-256 完整性…";
+      const actual=await sha256Hex(JSON.stringify({appState:obj.appState,media:obj.media}));
+      integrity=actual&&actual===obj.integrity.checksum?"verified":"failed";
+    }else if(obj.version===2&&obj.integrity?.algorithm==="none")integrity="legacy";
+    renderRestorePreview(obj,file.name,integrity,mediaBytes);
+    if(status)status.textContent=integrity==="failed"?"備份完整性驗證失敗，未修改任何資料。":"備份檢查完成，請先確認下方內容。";
   }catch(err){
-    if(status)status.textContent="這個完整備份檔無法讀取或內容不完整。";
-    toast("完整還原失敗");
+    resetRestorePreview();if(status)status.textContent="這個檔案不是可用的 Guitar Coach 完整備份。";toast("備份檔驗證失敗");
   }
-  e.target.value="";
+});
+
+$("#cancelFullRestore")?.addEventListener("click",()=>{resetRestorePreview();$("#fullBackupStatus").textContent="已取消完整還原，目前資料沒有變更。"});
+
+$("#confirmFullRestore")?.addEventListener("click",async()=>{
+  const obj=pendingFullRestore;if(!obj)return;
+  const btn=$("#confirmFullRestore"),status=$("#fullBackupStatus");btn.disabled=true;
+  try{
+    if(status)status.textContent="正在建立還原安全點…";
+    const oldState=structuredClone(state),oldMedia=await getAllLessonMedia();
+    try{
+      await clearAllLessonMedia();
+      for(let i=0;i<obj.media.length;i++){
+        const item=obj.media[i];if(status)status.textContent="正在還原附件 "+(i+1)+" / "+obj.media.length+"…";
+        await putLessonMedia({id:item.id||("media-"+Date.now()+"-"+i),lessonId:item.lessonId,type:item.type,blob:dataUrlToBlob(item.data),mimeType:item.mimeType||"",name:item.name||"",createdAt:item.createdAt||Date.now()});
+      }
+      state=deepMerge(structuredClone(defaultState),obj.appState);localStorage.setItem(STORE_KEY,JSON.stringify(state));localStorage.removeItem(TEACHER_DRAFT_KEY);
+      renderShared();refreshTeacherStorageUsage();if(status)status.textContent="完整還原完成："+obj.media.length+" 個附件。";toast("完整備份已還原");resetRestorePreview();
+    }catch(restoreError){
+      await clearAllLessonMedia();for(const item of oldMedia)await putLessonMedia(item);state=oldState;localStorage.setItem(STORE_KEY,JSON.stringify(state));renderShared();throw restoreError;
+    }
+  }catch(err){if(status)status.textContent="還原失敗，已嘗試保留還原前的資料。";toast("完整還原失敗");btn.disabled=false}
 });
 
 $("#exportData").onclick=()=>{

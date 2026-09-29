@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <title>Guitar Coach｜吉他學習教練</title>
-  <link rel="stylesheet" href="./styles.css?v=3.5.0">
+  <link rel="stylesheet" href="./styles.css?v=3.5.1">
 </head>
 <body>
 <div class="app-shell">
@@ -517,6 +517,29 @@
               <label class="secondary file-label">完整還原<input type="file" id="importFullBackup" accept=".guitarcoach,application/json"></label>
             </div>
             <small id="fullBackupStatus">備份檔只在你的裝置上產生，不會上傳網路。</small>
+
+            <div class="restore-preview hidden" id="restorePreview">
+              <div class="restore-preview-head">
+                <div>
+                  <span class="kicker">RESTORE PREVIEW</span>
+                  <strong id="restoreFileName">完整備份</strong>
+                </div>
+                <span class="restore-integrity" id="restoreIntegrity">等待驗證</span>
+              </div>
+              <div class="restore-stats">
+                <div><span>備份日期</span><strong id="restoreDate">—</strong></div>
+                <div><span>課堂紀錄</span><strong id="restoreLessons">0</strong></div>
+                <div><span>照片</span><strong id="restorePhotos">0</strong></div>
+                <div><span>錄音</span><strong id="restoreAudio">0</strong></div>
+                <div><span>附件大小</span><strong id="restoreMediaSize">0 MB</strong></div>
+                <div><span>練習時間</span><strong id="restoreMinutes">0 分</strong></div>
+              </div>
+              <p id="restorePreviewNote">確認內容正確後再還原。還原前不會修改目前裝置資料。</p>
+              <div class="button-row">
+                <button class="secondary" id="cancelFullRestore">取消</button>
+                <button class="primary" id="confirmFullRestore" disabled>確認還原</button>
+              </div>
+            </div>
           </div>
 
           <div class="backup-group compact">
@@ -545,6 +568,6 @@
   </nav>
   <div class="toast" id="toast"></div>
 </div>
-<script src="./app.js?v=3.5.0"></script>
+<script src="./app.js?v=3.5.1"></script>
 </body>
 </html>
