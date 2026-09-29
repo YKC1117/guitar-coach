@@ -213,9 +213,10 @@ function openTeacherLog(){
   route("learn");
   setLearnView("teacher");
 }
-$("#openTeacherLogFromHome").onclick=openTeacherLog;
+$("#openTeacherLogFromHome")?.addEventListener("click",openTeacherLog);
 
 function openTeacherForm(id=null){
+  if(!$("#teacherLessonForm"))return;
   currentTeacherLessonId=id;
   const record=id?(state.teacherLessons||[]).find(x=>x.id===id):null;
   $("#teacherLessonForm").classList.remove("hidden");
@@ -232,16 +233,17 @@ function openTeacherForm(id=null){
   $("#teacherLessonForm").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function closeTeacherForm(){
+  if(!$("#teacherLessonForm"))return;
   currentTeacherLessonId=null;
   $("#teacherLessonForm").classList.add("hidden");
   renderTeacherLessons();
 }
-$("#newTeacherLesson").onclick=()=>openTeacherForm();
-$("#emptyNewTeacherLesson").onclick=()=>openTeacherForm();
-$("#closeTeacherForm").onclick=closeTeacherForm;
-$("#cancelTeacherLesson").onclick=closeTeacherForm;
+$("#newTeacherLesson")?.addEventListener("click",()=>openTeacherForm());
+$("#emptyNewTeacherLesson")?.addEventListener("click",()=>openTeacherForm());
+$("#closeTeacherForm")?.addEventListener("click",closeTeacherForm);
+$("#cancelTeacherLesson")?.addEventListener("click",closeTeacherForm);
 
-$("#saveTeacherLesson").onclick=()=>{
+$("#saveTeacherLesson")?.addEventListener("click",()=>{
   const date=$("#teacherLessonDate").value||localDateKey();
   const topic=$("#teacherTopic").value.trim();
   const notes=$("#teacherNotes").value.trim();
@@ -273,7 +275,7 @@ $("#saveTeacherLesson").onclick=()=>{
   saveState();
   setLearnView("teacher");
   toast(existing?"課堂筆記已更新":"課堂筆記已儲存，作業已放到首頁");
-};
+});
 
 function teacherRecords(){
   if(!Array.isArray(state.teacherLessons))state.teacherLessons=[];
@@ -293,6 +295,7 @@ function toggleTeacherHomework(lessonId,homeworkId){
 function renderTeacherLessons(){
   const records=teacherRecords();
   const list=$("#teacherLessonList"),empty=$("#teacherLessonEmpty");
+  if(!list||!empty)return;
   empty.classList.toggle("hidden",records.length>0);
   if(!records.length){list.innerHTML="";return}
 
@@ -339,6 +342,7 @@ function renderTeacherHomework(){
     if(!item.done)pending.push({lessonId:r.id,homeworkId:item.id,text:item.text,date:r.date,topic:r.topic});
   }));
   const section=$("#teacherHomeworkSection"),list=$("#teacherHomeworkList");
+  if(!section||!list)return;
   section.classList.toggle("hidden",pending.length===0);
   if(!pending.length){list.innerHTML="";return}
   list.innerHTML=pending.slice(0,6).map(item=>`
@@ -764,7 +768,7 @@ window.addEventListener("pagehide",()=>{finishSwitchSession();stopTransientAudio
 
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 
-$("#teacherLessonDate").value=localDateKey();
+if($("#teacherLessonDate"))$("#teacherLessonDate").value=localDateKey();
 newSwitchSequence();
 renderPatterns();
 renderProgressionPreview();
