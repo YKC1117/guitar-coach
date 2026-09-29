@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <title>Guitar Coach｜吉他學習教練</title>
-  <link rel="stylesheet" href="./styles.css?v=3.6.0">
+  <link rel="stylesheet" href="./styles.css?v=3.7.0">
 </head>
 <body>
 <div class="app-shell">
@@ -95,6 +95,26 @@
 
         <div class="teacher-progress-track"><i id="teacherProgressBar"></i></div>
         <div class="teacher-homework-list" id="teacherHomeworkList"></div>
+      </section>
+
+      <section class="home-section teacher-prep hidden" id="teacherPrepSection">
+        <div class="section-head clean">
+          <div>
+            <span class="kicker">NEXT CLASS</span>
+            <h2>下次上課準備</h2>
+          </div>
+          <button class="section-action" id="openTeacherPrep">打開課堂筆記</button>
+        </div>
+        <div class="teacher-prep-card">
+          <div class="teacher-prep-head">
+            <div>
+              <span id="teacherPrepDate">尚未設定日期</span>
+              <strong id="teacherPrepSummary">沒有待問問題</strong>
+            </div>
+            <span class="teacher-prep-count" id="teacherPrepCount">0</span>
+          </div>
+          <div class="teacher-question-list" id="teacherQuestionList"></div>
+        </div>
       </section>
 
       <section class="home-section">
@@ -198,6 +218,19 @@
           <div class="teacher-two-col">
             <label class="field"><span>老師提醒 / 關鍵重點</span><textarea id="teacherNotes" rows="5" placeholder="例如：G 換 C 時食指先定位；右手不要停…"></textarea></label>
             <label class="field"><span>我今天卡住的地方</span><textarea id="teacherProblem" rows="5" placeholder="例如：F 還壓不乾淨、換 G 會慢半拍…"></textarea></label>
+          </div>
+
+          <div class="teacher-question-builder">
+            <div class="homework-builder-head">
+              <div>
+                <span class="quick-note-label">下次想問老師</span>
+                <small>一行一個問題，回到教室前直接照著問。</small>
+              </div>
+              <button class="question-copy-btn" id="copyProblemToQuestions" type="button">把卡住內容帶進來</button>
+            </div>
+            <label class="field full-field">
+              <textarea id="teacherQuestions" rows="4" placeholder="例如：&#10;F 和弦食指到底要壓在哪個角度？&#10;這段換和弦為什麼總是慢半拍？"></textarea>
+            </label>
           </div>
 
           <div class="lesson-media-block">
@@ -584,6 +617,6 @@
   </nav>
   <div class="toast" id="toast"></div>
 </div>
-<script src="./app.js?v=3.6.0"></script>
+<script src="./app.js?v=3.7.0"></script>
 </body>
 </html>

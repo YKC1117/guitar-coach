@@ -315,6 +315,7 @@ function openTeacherLog(){
   setLearnView("teacher");
 }
 $("#openTeacherLogFromHome")?.addEventListener("click",openTeacherLog);
+$("#openTeacherPrep")?.addEventListener("click",openTeacherLog);
 
 function readTeacherDraft(){
   try{return JSON.parse(localStorage.getItem(TEACHER_DRAFT_KEY)||"null")}catch(e){return null}
@@ -331,6 +332,7 @@ function writeTeacherDraft(){
     topic:$("#teacherTopic").value.trim(),
     notes:$("#teacherNotes").value.trim(),
     problem:$("#teacherProblem").value.trim(),
+    questionText:$("#teacherQuestions").value,
     homeworkText:$("#teacherHomework").value,
     tags:[...teacherSelectedTags],
     mediaOwner:currentTeacherMediaOwner,
@@ -363,6 +365,9 @@ function fillTeacherForm(data={}){
   $("#teacherTopic").value=data.topic||"";
   $("#teacherNotes").value=data.notes||"";
   $("#teacherProblem").value=data.problem||"";
+  $("#teacherQuestions").value=data.questionText!==undefined
+    ? data.questionText
+    : (data.questions||[]).map(x=>x.text).join("\n");
   $("#teacherHomework").value=data.homeworkText!==undefined
     ? data.homeworkText
     : (data.homework||[]).map(x=>x.text).join("\n");
@@ -403,6 +408,16 @@ $("#newTeacherLesson")?.addEventListener("click",()=>openTeacherForm());
 $("#emptyNewTeacherLesson")?.addEventListener("click",()=>openTeacherForm());
 $("#closeTeacherForm")?.addEventListener("click",closeTeacherForm);
 $("#cancelTeacherLesson")?.addEventListener("click",closeTeacherForm);
+$("#copyProblemToQuestions")?.addEventListener("click",()=>{
+  const problem=$("#teacherProblem").value.trim();
+  if(!problem){toast("目前還沒有填寫卡住的地方");return}
+  const box=$("#teacherQuestions");
+  const lines=box.value.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  problem.split(/\n+/).map(x=>x.trim()).filter(Boolean).forEach(x=>{if(!lines.includes(x))lines.push(x)});
+  box.value=lines.join("\n");
+  scheduleTeacherDraft();
+  toast("已加入下次想問老師");
+});
 
 $("#repeatLastTeacherLesson")?.addEventListener("click",()=>{
   const last=teacherRecords()[0];
@@ -635,17 +650,24 @@ $("#saveTeacherLesson")?.addEventListener("click",()=>{
   const topic=$("#teacherTopic").value.trim();
   const notes=$("#teacherNotes").value.trim();
   const problem=$("#teacherProblem").value.trim();
+  const questionLines=$("#teacherQuestions").value.split(/\n+/).map(x=>x.trim()).filter(Boolean);
   const song=$("#teacherSong").value.trim();
   const bpm=+$("#teacherBpm").value||null;
   const homeworkLines=$("#teacherHomework").value.split(/\n+/).map(x=>x.trim()).filter(Boolean);
-  if(!topic&&!notes&&!problem&&!song&&!homeworkLines.length){toast("至少記一項今天學的內容或回家作業");return}
+  if(!topic&&!notes&&!problem&&!song&&!homeworkLines.length&&!questionLines.length){toast("至少記一項今天學的內容、問題或回家作業");return}
 
   const existing=currentTeacherLessonId?(state.teacherLessons||[]).find(x=>x.id===currentTeacherLessonId):null;
   const oldByText=new Map((existing?.homework||[]).map(x=>[x.text,x]));
+  const oldQuestionsByText=new Map((existing?.questions||[]).map(x=>[x.text,x]));
   const id=existing?.id||currentTeacherMediaOwner||("class-"+Date.now());
   const homework=homeworkLines.map((text,i)=>{
     const old=oldByText.get(text);
     return {id:old?.id||(id+"-hw-"+i+"-"+Date.now()),text,done:old?.done||false};
+  });
+
+  const questions=questionLines.map((text,i)=>{
+    const old=oldQuestionsByText.get(text);
+    return {id:old?.id||(id+"-q-"+i+"-"+Date.now()),text,done:old?.done||false};
   });
 
   const record={
@@ -655,7 +677,7 @@ $("#saveTeacherLesson")?.addEventListener("click",()=>{
     nextDate:$("#nextLessonDate").value||"",
     song,bpm,topic,notes,problem,
     tags:[...teacherSelectedTags],
-    homework,
+    homework,questions,
     createdAt:existing?.createdAt||Date.now(),
     updatedAt:Date.now()
   };
@@ -683,6 +705,15 @@ function toggleTeacherHomework(lessonId,homeworkId){
   saveState();
   toast(item.done?"作業完成":"已恢復為未完成");
 }
+function toggleTeacherQuestion(lessonId,questionId){
+  const lesson=(state.teacherLessons||[]).find(x=>x.id===lessonId);
+  const item=lesson?.questions?.find(x=>x.id===questionId);
+  if(!item)return;
+  item.done=!item.done;
+  lesson.updatedAt=Date.now();
+  saveState();
+  toast(item.done?"已標記為問過老師":"已恢復為待問");
+}
 function practiceFromHomework(text=""){
   const t=text.toLowerCase();
   if(/調音|音準/.test(text)){openTool("tuner");return}
@@ -700,6 +731,34 @@ function lessonSummaryChips(r){
   return chips.slice(0,6);
 }
 
+function renderTeacherQuestionPanels(records,list){
+  records.forEach(r=>{
+    const questions=r.questions||[];
+    if(!questions.length)return;
+    const card=$$("[data-teacher-record-id]",list).find(el=>el.dataset.teacherRecordId===r.id);
+    if(!card)return;
+    const box=document.createElement("div");
+    box.className="record-questions";
+    const label=document.createElement("span");
+    label.className="record-label";
+    label.textContent="下次想問老師";
+    box.appendChild(label);
+    questions.forEach(q=>{
+      const row=document.createElement("button");
+      row.className="record-question-row"+(q.done?" done":"");
+      const mark=document.createElement("i");
+      mark.textContent=q.done?"✓":"?";
+      const copy=document.createElement("span");
+      copy.textContent=q.text;
+      row.append(mark,copy);
+      row.onclick=()=>toggleTeacherQuestion(r.id,q.id);
+      box.appendChild(row);
+    });
+    const media=card.querySelector(".teacher-record-media");
+    const actions=card.querySelector(".record-actions");
+    card.insertBefore(box,media||actions||null);
+  });
+}
 function renderTeacherLessons(){
   const records=teacherRecords();
   const list=$("#teacherLessonList"),empty=$("#teacherLessonEmpty");
@@ -712,7 +771,7 @@ function renderTeacherLessons(){
     const teacher=r.teacher?esc(r.teacher):"老師課程";
     const chips=lessonSummaryChips(r);
     const firstPending=hw.find(x=>!x.done);
-    return `<article class="teacher-record">
+    return `<article class="teacher-record" data-teacher-record-id="${esc(r.id)}">
       <div class="teacher-record-head">
         <div>
           <span class="teacher-date">${esc(r.date||"")}</span>
@@ -741,6 +800,7 @@ function renderTeacherLessons(){
     </article>`;
   }).join("");
   renderTeacherRecordMedia(records);
+  renderTeacherQuestionPanels(records,list);
 
   $$("[data-teacher-hw]",list).forEach(b=>b.onclick=()=>toggleTeacherHomework(b.dataset.teacherHw,b.dataset.hwId));
   $$("[data-homework-practice]",list).forEach(b=>b.onclick=()=>practiceFromHomework(b.dataset.homeworkPractice));
@@ -791,6 +851,96 @@ function renderTeacherHomework(){
     </div>`).join("");
   $$("[data-home-teacher-hw]",list).forEach(b=>b.onclick=()=>toggleTeacherHomework(b.dataset.homeTeacherHw,b.dataset.homeHwId));
   $$("[data-home-practice]",list).forEach(b=>b.onclick=()=>practiceFromHomework(b.dataset.homePractice));
+}
+
+
+function renderTeacherPrep(){
+  const section=$("#teacherPrepSection");
+  const list=$("#teacherQuestionList");
+  if(!section||!list)return;
+
+  const records=teacherRecords();
+  const pending=[];
+  records.forEach(r=>(r.questions||[]).forEach(q=>{
+    if(!q.done)pending.push({
+      lessonId:r.id,
+      questionId:q.id,
+      text:q.text,
+      nextDate:r.nextDate||"",
+      date:r.date||"",
+      topic:r.topic||r.song||"課堂筆記"
+    });
+  }));
+
+  const today=new Date();
+  today.setHours(0,0,0,0);
+  const upcoming=records.filter(r=>r.nextDate).map(r=>{
+    const p=r.nextDate.split("-").map(Number);
+    const d=new Date(p[0],p[1]-1,p[2]);
+    d.setHours(0,0,0,0);
+    return {record:r,days:Math.round((d-today)/86400000)};
+  }).filter(x=>x.days>=0).sort((a,b)=>a.days-b.days)[0]||null;
+
+  section.classList.toggle("hidden",pending.length===0&&!upcoming);
+  if(pending.length===0&&!upcoming){
+    list.replaceChildren();
+    return;
+  }
+
+  const dateEl=$("#teacherPrepDate");
+  const summaryEl=$("#teacherPrepSummary");
+  const countEl=$("#teacherPrepCount");
+
+  if(dateEl){
+    dateEl.textContent=!upcoming
+      ?"尚未設定下次上課"
+      :upcoming.days===0
+        ?"今天上課 · "+upcoming.record.nextDate
+        :upcoming.days===1
+          ?"明天上課 · "+upcoming.record.nextDate
+          :"距離上課 "+upcoming.days+" 天 · "+upcoming.record.nextDate;
+  }
+  if(summaryEl)summaryEl.textContent=pending.length?"還有 "+pending.length+" 個問題想問老師":"目前沒有待問問題";
+  if(countEl)countEl.textContent=String(pending.length);
+
+  list.replaceChildren();
+
+  if(!pending.length){
+    const empty=document.createElement("div");
+    empty.className="teacher-question-empty";
+    empty.textContent="問題都處理完了。上課前再快速看一次課堂筆記就好。";
+    list.appendChild(empty);
+    return;
+  }
+
+  pending.slice(0,6).forEach(item=>{
+    const row=document.createElement("button");
+    row.className="teacher-prep-question";
+
+    const mark=document.createElement("i");
+    mark.textContent="?";
+
+    const copy=document.createElement("span");
+    const strong=document.createElement("strong");
+    strong.textContent=item.text;
+    const small=document.createElement("small");
+    small.textContent=item.nextDate
+      ?"下次 "+item.nextDate+" · "+item.topic
+      :(item.date+" · "+item.topic);
+
+    copy.append(strong,small);
+    row.append(mark,copy);
+    row.onclick=()=>toggleTeacherQuestion(item.lessonId,item.questionId);
+    list.appendChild(row);
+  });
+
+  if(pending.length>6){
+    const more=document.createElement("button");
+    more.className="teacher-question-more";
+    more.textContent="還有 "+(pending.length-6)+" 個問題，查看全部";
+    more.onclick=openTeacherLog;
+    list.appendChild(more);
+  }
 }
 
 function renderDaily(){
@@ -1182,7 +1332,7 @@ function renderProgress(){
 }
 function renderShared(){
   $("#streakCount").textContent=streak();$("#levelBadge").textContent="Lv."+level();$("#coachAdvice").textContent=coachAdvice();
-  renderDaily();renderLessons();renderTeacherLessons();renderTeacherHomework();renderEarStats();renderProgress()
+  renderDaily();renderLessons();renderTeacherLessons();renderTeacherHomework();renderTeacherPrep();renderEarStats();renderProgress()
 }
 
 function blobToDataUrl(blob){

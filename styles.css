@@ -978,3 +978,87 @@ audio{width:100%;margin-top:14px}
   .teacher-homework-overview{align-items:stretch;flex-direction:column}
   .teacher-homework-overview .primary{width:100%}
 }
+
+
+/* Teacher next-class preparation v3.7 */
+.teacher-question-builder{
+  margin:10px 0 12px;padding:12px;border-radius:12px;
+  background:#0d1118;border:1px solid rgba(255,255,255,.045)
+}
+.question-copy-btn{
+  min-height:30px;padding:0 10px;border-radius:9px;
+  border:1px solid rgba(125,140,255,.16);
+  background:rgba(125,140,255,.07);color:#9ba6ff;
+  font-size:8px;font-weight:760
+}
+.record-questions{
+  display:grid;gap:5px;margin-top:12px
+}
+.record-question-row{
+  min-height:42px;width:100%;
+  display:grid;grid-template-columns:24px 1fr;gap:9px;align-items:center;
+  padding:7px 9px;border:0;border-radius:10px;
+  background:rgba(125,140,255,.055);color:#dce1eb;text-align:left
+}
+.record-question-row i{
+  width:22px;height:22px;border-radius:50%;
+  display:grid;place-items:center;font-style:normal;
+  border:1px solid rgba(125,140,255,.22);
+  color:#9aa6ff;font-size:9px;font-weight:850
+}
+.record-question-row span{font-size:10px;line-height:1.4}
+.record-question-row.done{opacity:.42}
+.record-question-row.done span{text-decoration:line-through}
+.record-question-row.done i{background:#7481ef;color:#fff;border-color:#7481ef}
+
+.teacher-prep-card{
+  padding:14px;border-radius:15px;
+  background:linear-gradient(135deg,rgba(157,121,255,.07),rgba(255,255,255,.02));
+  border:1px solid rgba(157,121,255,.12)
+}
+.teacher-prep-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px
+}
+.teacher-prep-head>div>span{
+  display:block;color:#7a8497;font-size:9px
+}
+.teacher-prep-head>div>strong{
+  display:block;margin-top:4px;font-size:13px
+}
+.teacher-prep-count{
+  min-width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;
+  background:rgba(157,121,255,.11);color:#b39aff;
+  font-size:11px;font-weight:850
+}
+.teacher-question-list{display:grid;gap:6px;margin-top:11px}
+.teacher-prep-question{
+  min-height:50px;width:100%;
+  display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;
+  padding:9px 10px;border:1px solid rgba(255,255,255,.045);
+  border-radius:11px;background:#111620;color:inherit;text-align:left
+}
+.teacher-prep-question:hover{background:#171c27}
+.teacher-prep-question i{
+  width:26px;height:26px;border-radius:50%;
+  display:grid;place-items:center;font-style:normal;
+  background:rgba(157,121,255,.09);color:#b39aff;
+  font-size:10px;font-weight:900
+}
+.teacher-prep-question strong{display:block;font-size:10px;line-height:1.4}
+.teacher-prep-question small{display:block;margin-top:3px;color:#687386;font-size:8px}
+.teacher-question-empty{
+  min-height:54px;display:grid;place-items:center;
+  color:#6f798c;font-size:9px;text-align:center
+}
+.teacher-question-more{
+  min-height:36px;border:1px solid var(--line);
+  border-radius:10px;background:transparent;color:#7f899c;font-size:9px
+}
+
+@media(max-width:620px){
+  .teacher-question-builder .homework-builder-head{
+    align-items:stretch;flex-direction:column
+  }
+  .question-copy-btn{width:100%}
+}
