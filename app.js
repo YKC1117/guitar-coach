@@ -3,7 +3,7 @@
   const base=document.createElement("script");
   base.src="./app-v310.js?v=3.10.0";
   base.onload=()=>{
-    ["./classroom-grid.js?v=3.11.2","./classroom-note-lock.js?v=3.11.2","./classroom-theme-export.js?v=3.11.2"].forEach(src=>{
+    ["./classroom-grid.js?v=3.11.3","./classroom-note-lock.js?v=3.11.3","./classroom-theme-export.js?v=3.11.3","./classroom-clean-start.js?v=3.11.3"].forEach(src=>{
       const addon=document.createElement("script");
       addon.src=src;
       addon.onerror=()=>console.error("Guitar Coach classroom enhancement failed to load:",src);
