@@ -1,4 +1,4 @@
-const CACHE="guitar-coach-v3-8-classroom-notebook-20261010";
+const CACHE="guitar-coach-v3-8-1-classroom-workflow-20261010";
 const ASSETS=["./","./index.html","./styles.css","./styles-core.css","./app.js","./app-core.js","./manifest.webmanifest","./icon.svg"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting()});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim()});
