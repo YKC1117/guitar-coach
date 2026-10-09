@@ -18,7 +18,7 @@
     let activeTab=localStorage.getItem(TAB_KEY)||"quick";
     let paletteTab=localStorage.getItem(PALETTE_KEY)||"common";
     let selectedTabFret="0";
-    let staffTool={kind:"note",duration:"quarter",accidental:"",dot:0,mark:"",label:"♩ 四分音符"};
+    let staffTool={kind:"none",duration:"quarter",accidental:"",dot:0,mark:"",label:"請先選擇符號"};
     let spanStart=null;
     const historyMap=new Map();
     const futureMap=new Map();
@@ -26,8 +26,14 @@
     const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c));
     const uid=()=>"nb-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
     const clone=v=>typeof structuredClone==="function"?structuredClone(v):JSON.parse(JSON.stringify(v));
-    const load=()=>{try{const v=JSON.parse(localStorage.getItem(STORE)||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}};
-    const persist=list=>localStorage.setItem(STORE,JSON.stringify(list));
+    let notebookCache=null,saveTimer=null,dirty=false;
+    const load=()=>{if(notebookCache)return notebookCache;try{const v=JSON.parse(localStorage.getItem(STORE)||"[]");notebookCache=Array.isArray(v)?v:[]}catch(e){notebookCache=[]}return notebookCache};
+    function flush(){clearTimeout(saveTimer);saveTimer=null;if(!dirty)return;try{localStorage.setItem(STORE,JSON.stringify(load()));dirty=false;const status=$("#classroomAutoSave");if(status)status.textContent="已暫存 "+new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}catch(e){const status=$("#classroomAutoSave");if(status)status.textContent="暫存失敗，請先匯出備份";console.error("Notebook storage failed",e)}}
+    const persist=list=>{notebookCache=list;dirty=true;clearTimeout(saveTimer);saveTimer=setTimeout(flush,180)};
+    window.gcNotebook={list:load,replace:list=>{persist(list);flush()},flush};
+    window.addEventListener("pagehide",flush);
+    document.addEventListener("visibilitychange",()=>{if(document.hidden)flush()});
+    window.addEventListener("storage",e=>{if(e.key===STORE){if(dirty)flush();notebookCache=null}});
     const sig=()=>({date:$("#teacherLessonDate")?.value||"",teacher:$("#teacherName")?.value.trim()||"",song:$("#teacherSong")?.value.trim()||"",topic:$("#teacherTopic")?.value.trim()||""});
     const same=(a,b)=>a&&b&&a.date===b.date&&a.teacher===b.teacher&&a.song===b.song&&a.topic===b.topic;
 
@@ -48,7 +54,7 @@
       if(idx>=0)list[idx]=next;else list.push(next);
       persist(list);form.dataset.classroomNotebookId=next.id;localStorage.setItem(ACTIVE,next.id);
       const status=$("#classroomAutoSave");
-      if(status){const d=new Date();status.textContent="已暫存 "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
+      if(status)status.textContent="待暫存"
     }
     function currentBlocks(){return getCurrent(true)?.blocks||[]}
     function setBlocks(blocks){saveCurrent(blocks);renderWorkspace()}
@@ -56,7 +62,7 @@
     function makeBlock(type){
       const b={id:uid(),type,memo:"",createdAt:Date.now()};
       if(type==="text")Object.assign(b,{text:""});
-      if(type==="staff")Object.assign(b,{items:[],notes:[],clef:"treble",meter:"4/4",key:"C"});
+      if(type==="staff")Object.assign(b,{items:[],notes:[],clef:"treble",meter:"",key:"C"});
       if(type==="tab")Object.assign(b,{cells:Array.from({length:6},()=>Array(16).fill(""))});
       if(type==="chords")Object.assign(b,{items:[]});
       if(type==="rhythm")Object.assign(b,{bpm:70,meter:"4/4",beats:Array(8).fill("")});
@@ -76,7 +82,7 @@
     ];
     function setTab(tab){
       if(!tabs.some(x=>x[0]===tab))tab="quick";
-      activeTab=tab;localStorage.setItem(TAB_KEY,tab);spanStart=null;renderWorkspace();
+      activeTab=tab;localStorage.setItem(TAB_KEY,tab);spanStart=null;staffTool={...staffTool,kind:"none",label:"請先選擇符號"};renderWorkspace();
     }
 
     function injectUI(){
@@ -107,13 +113,14 @@
     function bindOpenHooks(){
       ["newTeacherLesson","emptyNewTeacherLesson","repeatLastTeacherLesson"].forEach(id=>$("#"+id)?.addEventListener("click",()=>setTimeout(()=>prepareNotebook(id==="repeatLastTeacherLesson"?"seed":"new"),0)));
       document.addEventListener("click",e=>{if(e.target.closest("[data-teacher-edit]"))setTimeout(()=>prepareNotebook("edit"),0)});
-      $("#saveTeacherLesson")?.addEventListener("click",()=>{saveCurrent();setFocus(false)},true);
+      $("#saveTeacherLesson")?.addEventListener("click",()=>{saveCurrent();flush();setFocus(false)},true);
       $("#closeTeacherForm")?.addEventListener("click",()=>setFocus(false));
       $("#cancelTeacherLesson")?.addEventListener("click",()=>setFocus(false));
       $("#teacherLessonForm")?.addEventListener("input",()=>{const item=getCurrent(false);if(item)saveCurrent(item.blocks)});
     }
     function prepareNotebook(mode){
       const form=$("#teacherLessonForm");if(!form||form.classList.contains("hidden"))return;
+      staffTool={...staffTool,kind:"none",label:"請先選擇符號"};spanStart=null;
       if(mode==="new"||mode==="seed"){form.dataset.classroomNotebookId="";localStorage.removeItem(ACTIVE)}
       const list=load(),match=list.find(x=>same(x.signature,sig()));
       if(match){form.dataset.classroomNotebookId=match.id;localStorage.setItem(ACTIVE,match.id)}else getCurrent(true);
@@ -146,6 +153,7 @@
       if(activeTab==="chords")bindChordEvents(host);
       if(activeTab==="rhythm")bindRhythmEvents(host);
       if(activeTab==="summary")bindSummaryEvents(host);
+      document.dispatchEvent(new CustomEvent("gc:workspace-rendered"));
     }
     function emptyState(type,label){return `<div class="classroom-empty"><strong>還沒有${label}</strong><span>按右上角「＋ 新增」開始。</span><button type="button" data-page-add="${type}">＋ 新增${label}</button></div>`}
 
@@ -161,9 +169,9 @@
       return (b.notes||[]).map(n=>({id:uid(),kind:"note",duration:"quarter",x:n.x,y:n.y,accidental:"",dot:0,pitch:""}));
     }
     function snapshotStaff(id){const b=currentBlocks().find(x=>x.id===id);if(!b)return;const items=clone(normalizeStaffItems(b));const h=historyMap.get(id)||[];h.push(items);if(h.length>40)h.shift();historyMap.set(id,h);futureMap.delete(id)}
-    function setStaffItems(id,items,withHistory=true){if(withHistory)snapshotStaff(id);updateBlock(id,{items,notes:[]});renderWorkspace()}
-    function undoStaff(id){const h=historyMap.get(id)||[];if(!h.length)return;const b=currentBlocks().find(x=>x.id===id);if(!b)return;const f=futureMap.get(id)||[];f.push(clone(normalizeStaffItems(b)));futureMap.set(id,f);const prev=h.pop();historyMap.set(id,h);updateBlock(id,{items:prev,notes:[]});renderWorkspace()}
-    function redoStaff(id){const f=futureMap.get(id)||[];if(!f.length)return;const b=currentBlocks().find(x=>x.id===id);if(!b)return;const h=historyMap.get(id)||[];h.push(clone(normalizeStaffItems(b)));historyMap.set(id,h);const next=f.pop();futureMap.set(id,f);updateBlock(id,{items:next,notes:[]});renderWorkspace()}
+    function setStaffItems(id,items,withHistory=true){if(withHistory)snapshotStaff(id);updateBlock(id,{items,notes:[]});refreshStaff(id)}
+    function undoStaff(id){const h=historyMap.get(id)||[];if(!h.length)return;const b=currentBlocks().find(x=>x.id===id);if(!b)return;const f=futureMap.get(id)||[];f.push(clone(normalizeStaffItems(b)));futureMap.set(id,f);const prev=h.pop();historyMap.set(id,h);updateBlock(id,{items:prev,notes:[]});refreshStaff(id)}
+    function redoStaff(id){const f=futureMap.get(id)||[];if(!f.length)return;const b=currentBlocks().find(x=>x.id===id);if(!b)return;const h=historyMap.get(id)||[];h.push(clone(normalizeStaffItems(b)));historyMap.set(id,h);const next=f.pop();futureMap.set(id,f);updateBlock(id,{items:next,notes:[]});refreshStaff(id)}
 
     const palettes={
       common:[
@@ -224,12 +232,12 @@
       return `<i class="staff-symbol ${it.kind} dur-${it.duration}" data-staff-item="${i}" style="left:${it.x}%;top:${it.y}%"><span class="acc">${accidentalGlyph(it.accidental)}</span><span class="glyph">${glyph}</span>${it.dot?`<span class="dot">${"•".repeat(it.dot)}</span>`:""}</i>`;
     }
     function staffHtml(b){
-      const items=normalizeStaffItems(b),clef=b.clef||"treble",meter=b.meter||"4/4",key=b.key||"C";
+      const items=normalizeStaffItems(b),clef=b.clef||"treble",meter=b.meter??"",key=b.key||"C";
       return blockShell(b,"五線譜",`${staffPalette()}
         <div class="staff-settings">
           <label>譜號<select data-staff-clef="${b.id}"><option value="treble" ${clef==="treble"?"selected":""}>高音譜號</option><option value="bass" ${clef==="bass"?"selected":""}>低音譜號</option></select></label>
           <label>調號<select data-staff-key="${b.id}">${Object.entries(keyLabels).map(([k,l])=>`<option value="${k}" ${key===k?"selected":""}>${l}</option>`).join("")}</select></label>
-          <label>拍號<select data-staff-meter="${b.id}">${["4/4","3/4","2/4","6/8","9/8","12/8","5/4","7/8","C","¢"].map(x=>`<option ${meter===x?"selected":""}>${x}</option>`).join("")}</select></label>
+          <label>拍號<select data-staff-meter="${b.id}"><option value="" ${meter===""?"selected":""}>未設定</option>${["4/4","3/4","2/4","6/8","9/8","12/8","5/4","7/8","C","¢"].map(x=>`<option ${meter===x?"selected":""}>${x}</option>`).join("")}</select></label>
           <div class="staff-history"><button type="button" data-staff-undo="${b.id}">↶ 復原</button><button type="button" data-staff-redo="${b.id}">↷ 重做</button><button type="button" data-clear-staff="${b.id}">清空</button></div>
         </div>
         <div class="staff-help">先選工具，再直接連點譜面。音符會吸附在線／間；擦除模式點符號即可刪除。</div>
@@ -244,48 +252,86 @@
       if(kind==="note"||kind==="rest")staffTool={...staffTool,kind,duration:val,mark:"",label};
       else if(kind==="bar"||kind==="mark"||kind==="span")staffTool={...staffTool,kind,mark:val,label};
       else staffTool={...staffTool,kind,mark:"",label};
-      spanStart=null;renderWorkspace();
+      spanStart=null;syncStaffToolbar();
+    }
+    function syncStaffToolbar(){
+      const host=$("#classroomWorkspace");if(!host)return;
+      $$('[data-staff-tool]',host).forEach(x=>x.classList.toggle("active",toolActive(x.dataset.staffTool,x.dataset.toolValue)));
+      $$('[data-accidental]',host).forEach(x=>x.classList.toggle("active",x.dataset.accidental===staffTool.accidental));
+      $$('[data-dot-count]',host).forEach(x=>x.classList.toggle("active",+x.dataset.dotCount===staffTool.dot));
+      $$('.selected-tool strong',host).forEach(x=>x.textContent=staffTool.label);
+      $$('.selected-tool small',host).forEach(x=>x.textContent=spanStart?"已選起點，請點終點":"選一次後可連續輸入");
+    }
+    const moveDeadlines=new Map();
+    function armNote(el,it){
+      if(it.kind!=="note")return;
+      const remain=(moveDeadlines.get(it.id)||0)-Date.now();
+      el.classList.toggle("note-movable",remain>0);
+      if(remain>0)setTimeout(()=>{el.classList.remove("note-movable");if(moveDeadlines.get(it.id)<=Date.now())moveDeadlines.delete(it.id)},remain);
+    }
+    function appendStaffItem(canvas,it,index){canvas.insertAdjacentHTML("beforeend",itemHtml(it,index));armNote(canvas.lastElementChild,it)}
+    function staffCanvas(id){return $$('.staff-canvas[data-staff]').find(x=>x.dataset.staff===id)}
+    function refreshStaff(id){
+      const canvas=staffCanvas(id),b=currentBlocks().find(x=>x.id===id);if(!canvas||!b)return;
+      $$('[data-staff-item]',canvas).forEach(x=>x.remove());
+      normalizeStaffItems(b).forEach((it,i)=>appendStaffItem(canvas,it,i));
+      canvas.querySelector('.clef').textContent=b.clef==='bass'?'𝄢':'𝄞';
+      canvas.querySelector('.key-signature').textContent=keySymbol(b.key||'C');
+      canvas.querySelector('.time-signature').textContent=b.meter??'';
     }
     function bindStaffEvents(host){
-      $$('[data-palette-tab]',host).forEach(b=>b.onclick=()=>{paletteTab=b.dataset.paletteTab;localStorage.setItem(PALETTE_KEY,paletteTab);renderWorkspace()});
+      bindStaffControls(host);
+      $$('[data-staff]',host).forEach(canvas=>{
+        normalizeStaffItems(currentBlocks().find(b=>b.id===canvas.dataset.staff)).forEach((it,i)=>armNote(canvas.querySelector(`[data-staff-item="${i}"]`),it));
+        canvas.onpointerdown=e=>{
+          if(e.button!==0||!e.isPrimary)return;
+          const id=canvas.dataset.staff,b=currentBlocks().find(x=>x.id===id);if(!b)return;
+          const target=e.target.closest('[data-staff-item]'),items=normalizeStaffItems(b).slice();
+          if(target){
+            const i=+target.dataset.staffItem,it=items[i];if(!it)return;
+            if(staffTool.kind==='erase'){snapshotStaff(id);items.splice(i,1);updateBlock(id,{items,notes:[]});target.remove();$$('[data-staff-item]',canvas).forEach((el,j)=>el.dataset.staffItem=j);return}
+            if(it.kind==='note'&&Date.now()<(moveDeadlines.get(it.id)||0))beginDrag(e,canvas,target,id,it,i);
+            return;
+          }
+          if(staffTool.kind==='none')return;
+          const {x,y}=staffPoint(canvas,e);
+          if(staffTool.kind==='erase')return;
+          if(staffTool.kind==='span'&&(!spanStart||spanStart.id!==id)){spanStart={id,x,y};syncStaffToolbar();return}
+          snapshotStaff(id);
+          let it={id:uid(),kind:staffTool.kind,x,y};
+          if(it.kind==='span'){Object.assign(it,{mark:staffTool.mark,x:spanStart.x,y:spanStart.y,x2:x,y2:y});spanStart=null;syncStaffToolbar()}
+          else if(it.kind==='bar'||it.kind==='mark')it.mark=staffTool.mark;
+          else Object.assign(it,{duration:staffTool.duration,accidental:staffTool.accidental,dot:staffTool.dot,pitch:pitchSlots[staffYs.indexOf(y)]||''});
+          if(it.kind==='note')moveDeadlines.set(it.id,Date.now()+3000);
+          items.push(it);updateBlock(id,{items,notes:[]});appendStaffItem(canvas,it,items.length-1);
+        };
+      });
+    }
+    function bindStaffControls(host){
+      $$('[data-palette-tab]',host).forEach(b=>b.onclick=()=>{paletteTab=b.dataset.paletteTab;localStorage.setItem(PALETTE_KEY,paletteTab);$$('.staff-palette',host).forEach(x=>x.outerHTML=staffPalette());bindStaffControls(host)});
       $$('[data-staff-tool]',host).forEach(b=>b.onclick=()=>selectStaffTool(b.dataset.staffTool,b.dataset.toolValue,b.dataset.toolLabel));
-      $$('[data-accidental]',host).forEach(b=>b.onclick=()=>{staffTool={...staffTool,accidental:b.dataset.accidental};renderWorkspace()});
-      $$('[data-dot-count]',host).forEach(b=>b.onclick=()=>{staffTool={...staffTool,dot:+b.dataset.dotCount||0};renderWorkspace()});
-      $$('[data-staff-clef]',host).forEach(x=>x.onchange=()=>{updateBlock(x.dataset.staffClef,{clef:x.value});renderWorkspace()});
-      $$('[data-staff-key]',host).forEach(x=>x.onchange=()=>{updateBlock(x.dataset.staffKey,{key:x.value});renderWorkspace()});
-      $$('[data-staff-meter]',host).forEach(x=>x.onchange=()=>{updateBlock(x.dataset.staffMeter,{meter:x.value});renderWorkspace()});
+      $$('[data-accidental]',host).forEach(b=>b.onclick=()=>{staffTool={...staffTool,accidental:b.dataset.accidental};syncStaffToolbar()});
+      $$('[data-dot-count]',host).forEach(b=>b.onclick=()=>{staffTool={...staffTool,dot:+b.dataset.dotCount};syncStaffToolbar()});
+      for(const [attr,key] of [['staffClef','clef'],['staffKey','key'],['staffMeter','meter']]){
+        const selector=attr.replace(/[A-Z]/g,c=>'-'+c.toLowerCase());
+        $$('[data-'+selector+']',host).forEach(x=>x.onchange=()=>{updateBlock(x.dataset[attr],{[key]:x.value});refreshStaff(x.dataset[attr])});
+      }
       $$('[data-staff-undo]',host).forEach(b=>b.onclick=()=>undoStaff(b.dataset.staffUndo));
       $$('[data-staff-redo]',host).forEach(b=>b.onclick=()=>redoStaff(b.dataset.staffRedo));
-      $$('[data-clear-staff]',host).forEach(b=>b.onclick=()=>{if(confirm("清空這一段五線譜？"))setStaffItems(b.dataset.clearStaff,[])});
-      $$('[data-staff]',host).forEach(canvas=>canvas.addEventListener("pointerdown",e=>{
-        if(e.target.closest("[data-staff-item]"))return;
-        const id=canvas.dataset.staff,b=currentBlocks().find(x=>x.id===id);if(!b)return;
-        const r=canvas.getBoundingClientRect(),rawX=(e.clientX-r.left)/r.width*100,rawY=(e.clientY-r.top)/r.height*100;
-        const x=Math.max(16,Math.min(98,Math.round(rawX/2)*2));
-        const y=staffYs.reduce((a,v)=>Math.abs(v-rawY)<Math.abs(a-rawY)?v:a,staffYs[0]);
-        const items=clone(normalizeStaffItems(b));
-        if(staffTool.kind==="erase"){
-          let best=-1,dist=999;
-          items.forEach((it,i)=>{const iy=it.kind==="bar"?50:(it.y??50),d=Math.abs((it.x??0)-rawX)+Math.abs(iy-rawY)*.65;if(d<dist){dist=d;best=i}});
-          if(best>=0&&dist<12){snapshotStaff(id);items.splice(best,1);updateBlock(id,{items,notes:[]});renderWorkspace()}return;
-        }
-        if(staffTool.kind==="span"){
-          if(!spanStart){spanStart={id,x,y};renderWorkspace();return}
-          if(spanStart.id!==id){spanStart={id,x,y};renderWorkspace();return}
-          snapshotStaff(id);items.push({id:uid(),kind:"span",mark:staffTool.mark,x:spanStart.x,y:spanStart.y,x2:x,y2:y});spanStart=null;updateBlock(id,{items,notes:[]});renderWorkspace();return;
-        }
-        snapshotStaff(id);
-        if(staffTool.kind==="bar")items.push({id:uid(),kind:"bar",mark:staffTool.mark,x});
-        else if(staffTool.kind==="mark")items.push({id:uid(),kind:"mark",mark:staffTool.mark,x,y});
-        else items.push({id:uid(),kind:staffTool.kind,duration:staffTool.duration,x,y,accidental:staffTool.accidental,dot:staffTool.dot,pitch:pitchSlots[staffYs.indexOf(y)]||""});
-        updateBlock(id,{items,notes:[]});renderWorkspace();
-      }));
-      $$('[data-staff-item]',host).forEach(el=>el.onclick=e=>{
-        e.stopPropagation();
-        const block=el.closest('[data-block-id]'),id=block?.dataset.blockId,b=currentBlocks().find(x=>x.id===id);if(!b)return;
-        if(staffTool.kind!=="erase")return;
-        const items=clone(normalizeStaffItems(b));const i=+el.dataset.staffItem;if(i<0||i>=items.length)return;snapshotStaff(id);items.splice(i,1);updateBlock(id,{items,notes:[]});renderWorkspace();
-      });
+      $$('[data-clear-staff]',host).forEach(b=>b.onclick=()=>{if(confirm('清空這一段五線譜？'))setStaffItems(b.dataset.clearStaff,[])});
+    }
+    function staffPoint(canvas,e){const r=canvas.getBoundingClientRect(),rx=(e.clientX-r.left)/r.width*100,ry=(e.clientY-r.top)/r.height*100;return{x:Math.max(16,Math.min(98,Math.round(rx/2)*2)),y:staffYs.reduce((a,v)=>Math.abs(v-ry)<Math.abs(a-ry)?v:a,staffYs[0])}}
+    function beginDrag(e,canvas,el,id,it,index){
+      e.preventDefault();const pointer=e.pointerId,original={x:it.x,y:it.y};let point=original,done=false;
+      canvas.setPointerCapture(pointer);el.classList.add('note-dragging');
+      const move=ev=>{if(ev.pointerId!==pointer)return;if(Date.now()>=(moveDeadlines.get(it.id)||0)){finish();return}point=staffPoint(canvas,ev);el.style.left=point.x+'%';el.style.top=point.y+'%'};
+      const finish=ev=>{if(done||(ev&&ev.pointerId!==pointer))return;done=true;clearTimeout(deadline);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',finish);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('lostpointercapture',cancel);el.classList.remove('note-dragging');
+        const b=currentBlocks().find(x=>x.id===id);if(b&&(point.x!==original.x||point.y!==original.y)){snapshotStaff(id);const items=normalizeStaffItems(b).slice();const i=items.findIndex(x=>x.id===it.id);if(i>=0){items[i]={...items[i],...point,pitch:pitchSlots[staffYs.indexOf(point.y)]||''};updateBlock(id,{items,notes:[]});flush()}}
+        if(canvas.hasPointerCapture(pointer))canvas.releasePointerCapture(pointer);
+      };
+      const cancel=ev=>{if(ev.pointerId!==pointer)return;point=original;el.style.left=original.x+'%';el.style.top=original.y+'%';finish(ev)};
+      const deadline=setTimeout(()=>finish(),Math.max(0,(moveDeadlines.get(it.id)||0)-Date.now()));
+      canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',finish);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('lostpointercapture',cancel);
     }
 
     function tabHtml(b){
@@ -323,10 +369,10 @@
     function blockSummary(b){
       let text="";
       if(b.type==="text")text=(b.text||"").trim();
-      if(b.type==="staff"){const items=normalizeStaffItems(b);text=items.length?`五線譜：${items.length} 個記號、${keyLabels[b.key||"C"]||b.key||"C"}、${b.meter||"4/4"}`:""}
+      if(b.type==="staff"){const items=normalizeStaffItems(b);text=items.length?`五線譜：${items.length} 個記號、${keyLabels[b.key||"C"]||b.key||"C"}、${b.meter||"未設定拍號"}`:""}
       if(b.type==="tab"){const s=tabSummary(b);if(s)text=`TAB：${s}`}
       if(b.type==="chords"&&(b.items||[]).length)text=`和弦：${b.items.join(" → ")}`;
-      if(b.type==="rhythm"){const marks=(b.beats||[]).filter(Boolean).join(" ");text=`節奏：${b.bpm||70} BPM、${b.meter||"4/4"}${marks?"、"+marks:""}`}
+      if(b.type==="rhythm"){const marks=(b.beats||[]).filter(Boolean).join(" ");text=`節奏：${b.bpm||70} BPM、${b.meter||"未設定拍號"}${marks?"、"+marks:""}`}
       if(b.memo?.trim())text+=(text?"；":"")+b.memo.trim();
       return text;
     }

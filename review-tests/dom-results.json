@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "staffHotPathWorkspaceRebuilds": 0,
+  "groups": [
+    "five global routes",
+    "two staff isolation",
+    "pointercancel rollback",
+    "clean start",
+    "tool gate",
+    "append identity",
+    "drag pointerup commit",
+    "undo redo",
+    "deadline lock",
+    "erase",
+    "palette identity",
+    "meter",
+    "TAB",
+    "chordgrid shared storage",
+    "quick notes",
+    "rhythm",
+    "chords",
+    "summary export buttons",
+    "7 presets",
+    "storage roundtrip",
+    "legacy unknown fields",
+    "no synchronous store write on add/move"
+  ],
+  "errors": []
+}

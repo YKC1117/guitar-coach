@@ -1,15 +1,6 @@
 (() => {
   "use strict";
-  const base=document.createElement("script");
-  base.src="./app-v310.js?v=3.10.0";
-  base.onload=()=>{
-    ["./classroom-grid.js?v=3.11.3","./classroom-note-lock.js?v=3.11.3","./classroom-theme-export.js?v=3.11.3","./classroom-clean-start.js?v=3.11.3"].forEach(src=>{
-      const addon=document.createElement("script");
-      addon.src=src;
-      addon.onerror=()=>console.error("Guitar Coach classroom enhancement failed to load:",src);
-      document.head.appendChild(addon);
-    });
-  };
-  base.onerror=()=>console.error("Guitar Coach v3.10 baseline failed to load");
-  document.head.appendChild(base);
+  const files=["app-v310.js","classroom-grid.js","classroom-theme-export.js"];
+  function next(){const file=files.shift();if(!file)return;const script=document.createElement("script");script.src="./"+file+"?v=review-20261010-1";script.onload=next;script.onerror=()=>console.error("Guitar Coach script load failed:",file);document.head.appendChild(script)}
+  next();
 })();

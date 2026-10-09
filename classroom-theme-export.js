@@ -2,32 +2,14 @@
   "use strict";
   const STORE="guitarCoachClassroomNotebookV1",ACTIVE="guitarCoachClassroomActiveV1",THEME_KEY="guitarCoachThemeV1";
   const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-  const load=()=>{try{const v=JSON.parse(localStorage.getItem(STORE)||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}};
+  const load=()=>{window.gcNotebook?.flush();if(window.gcNotebook)return window.gcNotebook.list();try{const v=JSON.parse(localStorage.getItem(STORE)||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}};
 
-  const modes=[["dark","深色"],["light","淺色"],["midnight","午夜藍"],["graphite","石墨灰"]];
-  const accents=[["violet","紫"],["blue","藍"],["teal","青"],["green","綠"],["orange","橘"],["rose","玫瑰"]];
-
-  function readTheme(){try{return JSON.parse(localStorage.getItem(THEME_KEY)||"null")||{mode:"dark",accent:"violet"}}catch(e){return{mode:"dark",accent:"violet"}}}
-  function applyTheme(t,save=true){
-    const mode=modes.some(x=>x[0]===t.mode)?t.mode:"dark",accent=accents.some(x=>x[0]===t.accent)?t.accent:"violet";
-    document.documentElement.dataset.gcTheme=mode;document.documentElement.dataset.gcAccent=accent;
-    if(save)localStorage.setItem(THEME_KEY,JSON.stringify({mode,accent}));
-    const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=mode==="light"?"#f7f8fb":mode==="midnight"?"#08111f":mode==="graphite"?"#15171b":"#090b10";
-    renderThemePanel();
-  }
-  function injectThemeButton(){
-    if($("#gcThemeButton"))return;
-    const wrap=document.createElement("div");wrap.className="gc-theme-control";wrap.innerHTML=`<button type="button" id="gcThemeButton" class="gc-theme-button" aria-label="調整頁面外觀" aria-expanded="false"><span>◐</span><b>外觀</b></button><div class="gc-theme-panel hidden" id="gcThemePanel"></div>`;document.body.appendChild(wrap);
-    $("#gcThemeButton").onclick=e=>{e.stopPropagation();const p=$("#gcThemePanel"),open=p.classList.toggle("hidden")===false;$("#gcThemeButton").setAttribute("aria-expanded",String(open));if(open)renderThemePanel()};
-    document.addEventListener("click",e=>{if(!e.target.closest(".gc-theme-control")){$("#gcThemePanel")?.classList.add("hidden");$("#gcThemeButton")?.setAttribute("aria-expanded","false")}});
-    renderThemePanel();
-  }
-  function renderThemePanel(){
-    const p=$("#gcThemePanel");if(!p)return;const t=readTheme();
-    p.innerHTML=`<div class="gc-theme-section"><strong>明暗</strong><div class="gc-theme-mode-grid">${modes.map(([id,label])=>`<button type="button" class="${t.mode===id?"active":""}" data-theme-mode="${id}">${label}</button>`).join("")}</div></div><div class="gc-theme-section"><strong>主題色</strong><div class="gc-accent-grid">${accents.map(([id,label])=>`<button type="button" class="gc-accent ${t.accent===id?"active":""}" data-theme-accent="${id}" data-color="${id}" aria-label="${label}"><i></i><span>${label}</span></button>`).join("")}</div></div><small>只改顯示外觀，不會影響課堂資料。</small>`;
-    $$('[data-theme-mode]',p).forEach(b=>b.onclick=()=>applyTheme({...readTheme(),mode:b.dataset.themeMode}));
-    $$('[data-theme-accent]',p).forEach(b=>b.onclick=()=>applyTheme({...readTheme(),accent:b.dataset.themeAccent}));
-  }
+  const presets=[['black','黑'],['white','白'],['blue','藍'],['green','綠'],['purple','紫'],['orange','橘'],['rose','玫瑰']];
+  let theme='black';
+  function readTheme(){try{const t=JSON.parse(localStorage.getItem(THEME_KEY)||'null');if(presets.some(x=>x[0]===t?.preset))return t.preset;if(t?.mode==='light')return 'white';if(t?.mode==='midnight')return 'blue';return {violet:'purple',teal:'green'}[t?.accent]|| (presets.some(x=>x[0]===t?.accent)?t.accent:'black')}catch(e){return 'black'}}
+  function applyTheme(t,save=true){theme=presets.some(x=>x[0]===t)?t:'black';document.documentElement.dataset.gcTheme=theme;delete document.documentElement.dataset.gcAccent;if(save){let previous={};try{const value=JSON.parse(localStorage.getItem(THEME_KEY)||'{}');if(value&&typeof value==='object'&&!Array.isArray(value))previous=value}catch(e){}localStorage.setItem(THEME_KEY,JSON.stringify({...previous,preset:theme}))};const meta=$('meta[name="theme-color"]');if(meta)meta.content=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();renderThemePanel()}
+  function injectThemeButton(){if($('#gcThemeButton'))return;const wrap=document.createElement('div');wrap.className='gc-theme-control';wrap.innerHTML='<button type="button" id="gcThemeButton" class="gc-theme-button" aria-label="調整頁面配色" aria-expanded="false">配色</button><div class="gc-theme-panel hidden" id="gcThemePanel"></div>';document.body.appendChild(wrap);$('#gcThemeButton').onclick=()=>{const open=$('#gcThemePanel').classList.toggle('hidden')===false;$('#gcThemeButton').setAttribute('aria-expanded',String(open))};document.addEventListener('click',e=>{if(!e.target.closest('.gc-theme-control')){$('#gcThemePanel').classList.add('hidden');$('#gcThemeButton').setAttribute('aria-expanded','false')}});renderThemePanel()}
+  function renderThemePanel(){const panel=$('#gcThemePanel');if(!panel)return;panel.innerHTML='<div class="gc-theme-mode-grid">'+presets.map(([id,label])=>`<button type="button" data-theme-preset="${id}" class="${theme===id?'active':''}" aria-pressed="${theme===id}">${label}</button>`).join('')+'</div>';$$('[data-theme-preset]',panel).forEach(b=>b.onclick=()=>applyTheme(b.dataset.themePreset))}
 
   function currentLesson(){
     const form=$("#teacherLessonForm"),id=form?.dataset.classroomNotebookId||localStorage.getItem(ACTIVE)||"",item=load().find(x=>x.id===id)||null;
@@ -38,11 +20,11 @@
   function blockLines(b){
     const out=[];
     if(b.type==="text"&&b.text)out.push(...String(b.text).split(/\n+/));
-    if(b.type==="staff")out.push(`${(b.clef||"treble")==="treble"?"高音":"低音"}譜號 · ${b.key||"C"} · ${b.meter||"4/4"} · ${(b.items||b.notes||[]).length} 個符號`);
+    if(b.type==="staff")out.push(`${(b.clef||"treble")==="treble"?"高音":"低音"}譜號 · ${b.key||"C"} · ${b.meter||"未設定拍號"} · ${(b.items||b.notes||[]).length} 個符號`);
     if(b.type==="tab"){const t=tabText(b);if(t)out.push(t)}
     if(b.type==="chords"&&(b.items||[]).length)out.push((b.items||[]).join("  →  "));
     if(b.type==="chordgrid")out.push(`${b.name||"未命名和弦"} · 起始 ${b.baseFret||1} 品`);
-    if(b.type==="rhythm")out.push(`${b.bpm||70} BPM · ${b.meter||"4/4"} · ${(b.beats||[]).map(x=>x||"○").join(" ")}`);
+    if(b.type==="rhythm")out.push(`${b.bpm||70} BPM · ${b.meter||"未設定拍號"} · ${(b.beats||[]).map(x=>x||"○").join(" ")}`);
     if(b.memo)out.push("備註："+b.memo);return out;
   }
 
@@ -81,5 +63,5 @@
 
   function injectExportButtons(){const summary=$(".summary-actions");if(!summary||$("#exportLessonPNG"))return;const wrap=document.createElement("div");wrap.className="lesson-export-actions";wrap.innerHTML=`<button type="button" id="exportLessonPNG">匯出圖片 PNG</button><button type="button" id="exportLessonPDF">匯出 PDF</button>`;summary.insertAdjacentElement("afterend",wrap);$("#exportLessonPNG").onclick=exportPNG;$("#exportLessonPDF").onclick=exportPDF}
   function sync(){injectThemeButton();injectExportButtons()}
-  applyTheme(readTheme(),false);new MutationObserver(sync).observe(document.body,{subtree:true,childList:true});sync();
+  applyTheme(readTheme(),false);document.addEventListener("gc:workspace-rendered",sync);sync();
 })();
