@@ -3,3 +3,28 @@
 @import url("./classroom-theme-export.css?v=navigation-20261010-4");
 
 :is(#gcLoadFailure,#gcStorageFailure){margin:12px;padding:12px;border:1px solid var(--danger);border-radius:12px;background:var(--surface);color:var(--text)}:is(#gcLoadFailure,#gcStorageFailure) p{margin:0 0 8px}:is(#gcLoadFailure,#gcStorageFailure) button{padding:8px 14px;border:1px solid var(--line);border-radius:8px}
+
+/* Header appearance only; existing controls and event bindings stay intact. */
+html[data-gc-theme] .topbar{
+  min-height:calc(72px + env(safe-area-inset-top));
+  padding:calc(14px + env(safe-area-inset-top)) 96px 14px 20px;
+  gap:14px;box-shadow:0 6px 24px rgb(0 0 0 / .04);
+}
+.topbar .brand{flex:1;min-width:0;gap:11px;padding:0;background:transparent!important;box-shadow:none;border-radius:12px}
+.topbar .brand .logo{flex:0 0 40px;width:40px;height:40px;border-radius:13px;font-size:20px;font-weight:850;box-shadow:0 4px 12px rgb(0 0 0 / .10)}
+.topbar .brand-copy{min-width:0;background:transparent}
+.topbar .brand-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px;line-height:1.25;letter-spacing:-.025em;color:var(--text)}
+.topbar .brand-copy small{margin-top:3px;font-size:10px;letter-spacing:.025em;color:var(--muted)}
+.topbar .top-actions{flex-shrink:0;gap:7px}
+.topbar .level-chip,.topbar .icon-btn{height:42px;min-width:42px;padding:0 11px;border-radius:13px;background:var(--surface-2);border:1px solid var(--line);box-shadow:none;color:var(--text)}
+.topbar .level-chip{font-size:12px;font-weight:750;white-space:nowrap}
+.gc-theme-control{top:calc(14px + env(safe-area-inset-top));right:max(16px,calc((100vw - 1080px)/2 + 16px))}
+.gc-theme-button{height:42px;padding:0 13px;border-radius:13px;background:var(--surface-2);box-shadow:none;font-size:12px;font-weight:750;border-color:var(--line)}
+.gc-theme-panel{top:52px}
+@media(max-width:560px){
+  html[data-gc-theme] .topbar{padding-left:14px;padding-right:88px;gap:10px}
+  .topbar .brand{gap:8px}.topbar .brand .logo{flex-basis:36px;width:36px;height:36px;border-radius:12px;font-size:18px}
+  .topbar .brand-copy strong{font-size:14px}.topbar .brand-copy small{display:none}
+  .topbar .level-chip,.topbar .icon-btn{padding:0 9px}
+  .gc-theme-control{right:14px}.gc-theme-button{padding:0 11px}
+}
