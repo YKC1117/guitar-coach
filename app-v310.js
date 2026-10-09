@@ -1,11 +1,7 @@
 (() => {
   "use strict";
 
-  const core=document.createElement("script");
-  core.src="./app-core.js?v=3.7.2-core";
-  core.onload=initClassroomNotebook;
-  core.onerror=()=>console.error("Guitar Coach core failed to load");
-  document.head.appendChild(core);
+  initClassroomNotebook();
 
   function initClassroomNotebook(){
     const $=(s,r=document)=>r.querySelector(s);
@@ -16,6 +12,7 @@
     const PALETTE_KEY="guitarCoachStaffPaletteV2";
 
     let activeTab=localStorage.getItem(TAB_KEY)||"quick";
+    if(!["quick","staff","tab","chords","rhythm","summary"].includes(activeTab))activeTab="quick";
     let paletteTab=localStorage.getItem(PALETTE_KEY)||"common";
     let selectedTabFret="0";
     let staffTool={kind:"none",duration:"quarter",accidental:"",dot:0,mark:"",label:"請先選擇符號"};

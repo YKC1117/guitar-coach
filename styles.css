@@ -1,3 +1,5 @@
 @import url("./styles-v310.css?v=3.10.0");
 @import url("./classroom-v311.css?v=3.11.2");
-@import url("./classroom-theme-export.css?v=review-20261010-1");
+@import url("./classroom-theme-export.css?v=recovery-20261010-2");
+
+#gcLoadFailure{margin:12px;padding:12px;border:1px solid var(--danger);border-radius:12px;background:var(--surface);color:var(--text)}#gcLoadFailure p{margin:0 0 8px}#gcLoadFailure button{padding:8px 14px;border:1px solid var(--line);border-radius:8px}

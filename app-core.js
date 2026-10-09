@@ -5,6 +5,7 @@ const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const STORE_KEY = "guitarCoachV2";
 const TEACHER_DRAFT_KEY = "guitarCoachTeacherDraftV1";
+function cloneData(value){return typeof window.structuredClone==="function"?window.structuredClone(value):JSON.parse(JSON.stringify(value))}
 const defaultState = {
   version:2, days:{}, totalMinutes:0, totalSwitches:0, tunerSessions:0,
   bestSwitch:null, lessons:{}, ear:{correct:0,total:0}, practiceSessions:0,
@@ -116,16 +117,16 @@ function localDateKey(d=new Date()){
 function loadState(){
   try{
     const raw=JSON.parse(localStorage.getItem(STORE_KEY)||"null");
-    if(raw) return deepMerge(structuredClone(defaultState),raw);
+    if(raw) return deepMerge(cloneData(defaultState),raw);
     const old=JSON.parse(localStorage.getItem("guitarCoachV1")||"null");
     if(old){
-      return deepMerge(structuredClone(defaultState),{
+      return deepMerge(cloneData(defaultState),{
         days:old.days||{}, totalMinutes:old.totalMinutes||0, totalSwitches:old.totalSwitches||0,
         tunerSessions:old.tunerSessions||0, bestSwitch:old.bestSwitch??null, lastActive:old.lastActive||null
       });
     }
   }catch(e){}
-  return structuredClone(defaultState);
+  return cloneData(defaultState);
 }
 function deepMerge(base,extra){
   for(const k in extra){
@@ -1523,14 +1524,14 @@ $("#confirmFullRestore")?.addEventListener("click",async()=>{
   const btn=$("#confirmFullRestore"),status=$("#fullBackupStatus");btn.disabled=true;
   try{
     if(status)status.textContent="正在建立還原安全點…";
-    const oldState=structuredClone(state),oldMedia=await getAllLessonMedia();
+    const oldState=cloneData(state),oldMedia=await getAllLessonMedia();
     try{
       await clearAllLessonMedia();
       for(let i=0;i<obj.media.length;i++){
         const item=obj.media[i];if(status)status.textContent="正在還原附件 "+(i+1)+" / "+obj.media.length+"…";
         await putLessonMedia({id:item.id||("media-"+Date.now()+"-"+i),lessonId:item.lessonId,type:item.type,blob:dataUrlToBlob(item.data),mimeType:item.mimeType||"",name:item.name||"",createdAt:item.createdAt||Date.now()});
       }
-      state=deepMerge(structuredClone(defaultState),obj.appState);localStorage.setItem(STORE_KEY,JSON.stringify(state));localStorage.removeItem(TEACHER_DRAFT_KEY);
+      state=deepMerge(cloneData(defaultState),obj.appState);localStorage.setItem(STORE_KEY,JSON.stringify(state));localStorage.removeItem(TEACHER_DRAFT_KEY);
       renderShared();refreshTeacherStorageUsage();if(status)status.textContent="完整還原完成："+obj.media.length+" 個附件。";toast("完整備份已還原");resetRestorePreview();
     }catch(restoreError){
       await clearAllLessonMedia();for(const item of oldMedia)await putLessonMedia(item);state=oldState;localStorage.setItem(STORE_KEY,JSON.stringify(state));renderShared();throw restoreError;
@@ -1543,10 +1544,10 @@ $("#exportData").onclick=()=>{
 };
 $("#importData").onchange=async e=>{
   const f=e.target.files?.[0];if(!f)return;
-  try{const obj=JSON.parse(await f.text());state=deepMerge(structuredClone(defaultState),obj);saveState();toast("備份已匯入")}catch(err){toast("這個備份檔無法讀取")}
+  try{const obj=JSON.parse(await f.text());state=deepMerge(cloneData(defaultState),obj);saveState();toast("備份已匯入")}catch(err){toast("這個備份檔無法讀取")}
   e.target.value=""
 };
-$("#resetData").onclick=()=>{if(confirm("確定清除所有 Guitar Coach 練習紀錄與課堂附件？這無法復原。")){state=structuredClone(defaultState);localStorage.removeItem(STORE_KEY);localStorage.removeItem(TEACHER_DRAFT_KEY);clearAllLessonMedia();saveState();toast("紀錄與本機附件已清除")}};
+$("#resetData").onclick=()=>{if(confirm("確定清除所有 Guitar Coach 練習紀錄與課堂附件？這無法復原。")){state=cloneData(defaultState);localStorage.removeItem(STORE_KEY);localStorage.removeItem(TEACHER_DRAFT_KEY);clearAllLessonMedia();saveState();toast("紀錄與本機附件已清除")}};
 
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;$("#installBtn").classList.remove("hidden")});
 $("#installBtn").onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;$("#installBtn").classList.add("hidden")};
@@ -1559,7 +1560,7 @@ function stopTransientAudio(){
 }
 window.addEventListener("pagehide",()=>{finishSwitchSession();stopTransientAudio();stopTeacherAudioRecording();mediaUrls.forEach(url=>URL.revokeObjectURL(url));mediaUrls.clear()});
 
-if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+// Service worker registration belongs to app.js and runs before core startup.
 
 if($("#teacherLessonDate"))$("#teacherLessonDate").value=localDateKey();
 newSwitchSequence();
@@ -1571,4 +1572,5 @@ renderEarOptions();
 newEarQuestion();
 updateReferenceLabel();
 renderShared();
+document.documentElement.dataset.gcCoreReady="true";
 })();
