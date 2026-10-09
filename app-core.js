@@ -294,6 +294,8 @@ function drawChord(canvas,name){
 }
 
 function route(name){
+  if(!["home","learn","practice","tools","progress"].includes(name))return;
+  if(name!=="learn"&&!$("#teacherLessonForm")?.classList.contains("hidden"))closeTeacherForm();
   stopTransientAudio();
   $$(".page").forEach(p=>p.classList.toggle("active",p.id==="page-"+name));
   $$("[data-route]").forEach(b=>b.classList.toggle("active",b.dataset.route===name));
@@ -316,6 +318,7 @@ let teacherMediaStartedAt=0;
 let teacherMediaTimer=null;
 
 function setLearnView(view){
+  if(view!=="teacher"&&!$("#teacherLessonForm")?.classList.contains("hidden"))closeTeacherForm();
   $$("#learnTabs button").forEach(b=>b.classList.toggle("active",b.dataset.learnView===view));
   $$(".learn-view").forEach(v=>v.classList.toggle("active",v.id==="learn-"+view));
   $("#lessonPanel").classList.add("hidden");
@@ -411,6 +414,9 @@ function openTeacherForm(id=null,seed=null){
   $("#teacherLessonForm").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function closeTeacherForm(){
+  window.gcNotebook?.flush();
+  document.body.classList.remove("classroom-focus");
+  const focusButton=$("#classroomFocusBtn");if(focusButton)focusButton.textContent="上課專注";
   if(!$("#teacherLessonForm"))return;
   stopTeacherAudioRecording();
   writeTeacherDraft();
