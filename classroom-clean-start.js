@@ -10,15 +10,12 @@
   const load=()=>{try{const v=JSON.parse(localStorage.getItem(STORE)||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}};
   const save=v=>localStorage.setItem(STORE,JSON.stringify(v));
 
-  function migrateBlankStaffMeters(){
+  function migrateDefaultStaffMeters(){
     const list=load();let changed=false;
     list.forEach(note=>{
       (note.blocks||[]).forEach(b=>{
         if(b.type!=="staff")return;
-        const items=Array.isArray(b.items)?b.items:[];
-        const legacy=Array.isArray(b.notes)?b.notes:[];
-        const pristine=items.length===0&&legacy.length===0;
-        if(pristine&&b.meter==="4/4"&&b.meterExplicit!==true){
+        if(b.meter==="4/4"&&b.meterExplicit!==true){
           b.meter="";
           b.meterExplicit=false;
           changed=true;
@@ -44,10 +41,19 @@
     save(list);
   }
 
+  function normalizeRenderedBlock(id,b){
+    if(b.meter==="4/4"&&b.meterExplicit!==true){
+      setExplicitMeter(id,"");
+      return {...b,meter:"",meterExplicit:false};
+    }
+    return b;
+  }
+
   function cleanStaffUI(){
     $$('[data-block-id]').forEach(card=>{
       const canvas=card.querySelector('.staff-canvas[data-staff]');if(!canvas)return;
-      const id=card.dataset.blockId,b=getBlock(id);if(!b)return;
+      const id=card.dataset.blockId;let b=getBlock(id);if(!b)return;
+      b=normalizeRenderedBlock(id,b);
       const meterExplicit=b.meterExplicit===true&&!!b.meter;
       const select=card.querySelector(`[data-staff-meter="${id}"]`);
       if(select){
@@ -90,7 +96,7 @@
   },true);
 
   const mo=new MutationObserver(()=>cleanStaffUI());
-  migrateBlankStaffMeters();
+  migrateDefaultStaffMeters();
   mo.observe(document.documentElement,{subtree:true,childList:true});
   cleanStaffUI();
 })();
