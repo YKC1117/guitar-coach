@@ -1,5 +1,6 @@
 (() => {
   "use strict";
+const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.getItem(key),setItem:(key,value)=>window.localStorage.setItem(key,value),removeItem:key=>window.localStorage.removeItem(key)};
   const storage=window.gcStorage;
 
   initClassroomNotebook();
@@ -31,7 +32,7 @@
     window.gcNotebook={list:load,replace:list=>{persist(list);flush()},flush};
     window.addEventListener("pagehide",flush);
     document.addEventListener("visibilitychange",()=>{if(document.hidden)flush()});
-    window.addEventListener("storage",e=>{if(e.key===STORE){if(dirty)flush();notebookCache=null}});
+    window.addEventListener("storage",e=>{if(e.key===(window.gcProfiles?.physicalKey(STORE)||STORE)){if(dirty)flush();notebookCache=null}});
     const sig=()=>({date:$("#teacherLessonDate")?.value||"",teacher:$("#teacherName")?.value.trim()||"",song:$("#teacherSong")?.value.trim()||"",topic:$("#teacherTopic")?.value.trim()||""});
     const same=(a,b)=>a&&b&&a.date===b.date&&a.teacher===b.teacher&&a.song===b.song&&a.topic===b.topic;
 

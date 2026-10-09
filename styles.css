@@ -1,6 +1,6 @@
-@import url("./styles-v310.css?v=navigation-20261010-4");
-@import url("./classroom-v311.css?v=navigation-20261010-4");
-@import url("./classroom-theme-export.css?v=navigation-20261010-4");
+@import url("./styles-v310.css?v=profiles-20261010-7");
+@import url("./classroom-v311.css?v=profiles-20261010-7");
+@import url("./classroom-theme-export.css?v=profiles-20261010-7");
 
 :is(#gcLoadFailure,#gcStorageFailure){margin:12px;padding:12px;border:1px solid var(--danger);border-radius:12px;background:var(--surface);color:var(--text)}:is(#gcLoadFailure,#gcStorageFailure) p{margin:0 0 8px}:is(#gcLoadFailure,#gcStorageFailure) button{padding:8px 14px;border:1px solid var(--line);border-radius:8px}
 
@@ -30,3 +30,17 @@ html[data-gc-theme] .topbar{
 }
 
 html[data-gc-theme] .topbar .brand{background:transparent!important;color:var(--text)!important;border-color:transparent!important}
+
+/* Local users: existing navigation remains the single route controller. */
+.gc-user-switch{display:block;margin:8px auto 0;max-width:calc(100% - 32px);min-height:40px;padding:8px 16px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted);font:inherit;font-size:13px;overflow-wrap:anywhere}
+.gc-profile-panel{scroll-margin-top:110px}
+.gc-profile-panel p{color:var(--muted);line-height:1.7}
+.gc-profile-panel label{display:grid;gap:8px;margin:16px 0;color:var(--text)}
+.gc-profile-panel input,.gc-profile-panel select{box-sizing:border-box;display:block;width:100%;min-width:0;min-height:44px;margin:10px 0;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit}
+.gc-profile-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.gc-profile-row input{flex:1 1 180px}
+.gc-profile-panel button{min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;cursor:pointer}
+.gc-profile-panel details{margin:16px 0;border-top:1px solid var(--line);padding-top:16px}
+.gc-profile-panel summary{cursor:pointer;color:var(--text);min-height:36px}
+.gc-profile-panel [data-gc-clear]{color:var(--danger)}
+#gcProfileStatus{min-height:24px;color:var(--text)}

@@ -1,5 +1,6 @@
 (() => {
   "use strict";
+const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.getItem(key),setItem:(key,value)=>window.localStorage.setItem(key,value),removeItem:key=>window.localStorage.removeItem(key)};
   const storage=window.gcStorage;
   const STORE="guitarCoachClassroomNotebookV1",ACTIVE="guitarCoachClassroomActiveV1";
   let tool="●",barreStart=null,active=false,ready=false;

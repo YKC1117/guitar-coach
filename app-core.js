@@ -1,5 +1,6 @@
 (() => {
 "use strict";
+const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.getItem(key),setItem:(key,value)=>window.localStorage.setItem(key,value),removeItem:key=>window.localStorage.removeItem(key)};
 
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
@@ -13,9 +14,9 @@ const storage=window.gcStorage={
     banner.textContent="本機儲存目前無法使用。操作可以繼續，但新增內容可能無法保留；關閉頁面前請匯出備份。";
     document.body.prepend(banner);
   },
-  getItem(key){try{return window.localStorage.getItem(key)}catch(e){this.warn();return null}},
-  setPreference(key,value){try{window.localStorage.setItem(key,value);return true}catch(e){this.warn();return false}},
-  removePreference(key){try{window.localStorage.removeItem(key);return true}catch(e){this.warn();return false}}
+  getItem(key){try{return localStorage.getItem(key)}catch(e){this.warn();return null}},
+  setPreference(key,value){try{localStorage.setItem(key,value);return true}catch(e){this.warn();return false}},
+  removePreference(key){try{localStorage.removeItem(key);return true}catch(e){this.warn();return false}}
 };
 
 function cloneData(value){return typeof window.structuredClone==="function"?window.structuredClone(value):JSON.parse(JSON.stringify(value))}
@@ -29,7 +30,7 @@ const defaultState = {
 let state = loadState();
 let deferredInstall = null;
 
-const MEDIA_DB_NAME="guitarCoachMediaV1";
+const MEDIA_DB_NAME=window.gcProfiles?.dbName||"guitarCoachMediaV1";
 const MEDIA_STORE="lessonMedia";
 let mediaDbPromise=null;
 const mediaUrls=new Map();
@@ -53,6 +54,7 @@ function openMediaDb(){
 }
 async function putLessonMedia(item){
   const db=await openMediaDb();
+  if(window.gcProfiles&&!window.gcProfiles.canWrite())throw new Error("Profile data has been cleared");
   return new Promise((resolve,reject)=>{
     const tx=db.transaction(MEDIA_STORE,"readwrite");
     tx.objectStore(MEDIA_STORE).put(item);
@@ -312,6 +314,7 @@ function esc(value){
 let currentTeacherLessonId=null;
 let currentTeacherMediaOwner=null;
 let teacherMediaRecorder=null;
+let teacherMediaFinished=Promise.resolve(),teacherMediaResolve=null;
 let teacherMediaStream=null;
 let teacherMediaChunks=[];
 let teacherMediaStartedAt=0;
@@ -615,7 +618,9 @@ $("#teacherAudioRecord")?.addEventListener("click",async()=>{
       $("#teacherRecordingStatus")?.classList.add("hidden");
       if($("#teacherRecordingTime"))$("#teacherRecordingTime").textContent="00:00";
       teacherMediaRecorder=null;teacherMediaStream=null;teacherMediaChunks=[];
+      teacherMediaResolve?.();teacherMediaResolve=null;
     };
+    teacherMediaFinished=new Promise(resolve=>{teacherMediaResolve=resolve});
     teacherMediaRecorder.start();
     teacherMediaStartedAt=Date.now();
     $("#teacherAudioRecord").classList.add("hidden");
@@ -1566,7 +1571,10 @@ $("#importData").onchange=async e=>{
   try{const obj=JSON.parse(await f.text());state=deepMerge(cloneData(defaultState),obj);saveState();toast("備份已匯入")}catch(err){toast("這個備份檔無法讀取")}
   e.target.value=""
 };
-$("#resetData").onclick=()=>{if(confirm("確定清除所有 Guitar Coach 練習紀錄與課堂附件？這無法復原。")){state=cloneData(defaultState);localStorage.removeItem(STORE_KEY);storage.removePreference(TEACHER_DRAFT_KEY);clearAllLessonMedia();saveState();toast("紀錄與本機附件已清除")}};
+$("#resetData").onclick=()=>window.gcProfiles?.openReset();
+window.addEventListener("gc:profile-leaving",writeTeacherDraft);
+window.gcPrepareProfileSwitch=async()=>{stopTeacherAudioRecording();await teacherMediaFinished;};
+window.gcStopForReset=async()=>{clearTimeout(teacherDraftTimer);stopTeacherAudioRecording();teacherMediaStream?.getTracks().forEach(t=>t.stop());await teacherMediaFinished;};
 
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;$("#installBtn").classList.remove("hidden")});
 $("#installBtn").onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;$("#installBtn").classList.add("hidden")};

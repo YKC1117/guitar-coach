@@ -1,0 +1,35 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{webcrypto}=require('node:crypto');
+const {JSDOM,VirtualConsole}=require('jsdom'),{IDBFactory}=require('fake-indexeddb');
+const root=path.resolve(__dirname,'..'),script=fs.readFileSync(path.join(root,'user-profiles.js'),'utf8');
+const REG='guitarCoachProfilesV1',ACTIVE='guitarCoachProfileActiveV1',LOCK='guitarCoachClearPasswordV1',DATA='guitarCoachV2',NOTE='guitarCoachClassroomNotebookV1',prefix=id=>'guitarCoachUser:'+id+':';
+function page(seed={},db=new IDBFactory()){
+ const v=new VirtualConsole(),dom=new JSDOM('<header class="topbar"></header><nav class="bottom-nav"><button data-route="progress"></button></nav><main id="page-progress"></main>',{url:'https://example.test/',runScripts:'outside-only',virtualConsole:v});const w=dom.window;
+ Object.defineProperty(w,'crypto',{value:webcrypto});w.TextEncoder=TextEncoder;w.indexedDB=db;w.HTMLElement.prototype.scrollIntoView=()=>{};
+ for(const [k,value] of Object.entries(seed))w.localStorage.setItem(k,value);w.eval(script);return dom;
+}
+function snapshot(w){const result={};for(let i=0;i<w.localStorage.length;i++){const key=w.localStorage.key(i);result[key]=w.localStorage.getItem(key)}return result}
+async function media(factory,name,action){return new Promise((resolve,reject)=>{const r=factory.open(name,1);r.onupgradeneeded=()=>r.result.createObjectStore('lessonMedia',{keyPath:'id'});r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,tx=db.transaction('lessonMedia',action==='put'?'readwrite':'readonly'),store=tx.objectStore('lessonMedia');let result;const req=action==='put'?store.put({id:'photo',blob:'fake'}):store.getAll();req.onsuccess=()=>result=req.result;tx.oncomplete=()=>{db.close();resolve(result)};tx.onerror=()=>reject(tx.error)}})}
+(async()=>{
+ const legacy='{"version":2,"custom":{"keep":true}}',note='[{"id":"legacy","unknown":"keep"}]';let dom=page({[DATA]:legacy,[NOTE]:note,otherSite:'untouched'}),w=dom.window,p=w.gcProfiles;
+ assert.equal(p.store.getItem(DATA),legacy);p.mount();assert.equal(w.document.querySelector('#gcProfileSelect').value,'default');assert.equal(w.localStorage.getItem(NOTE),note);
+ const user=p.create('學生甲');assert.throws(()=>p.create('學生甲'));assert.throws(()=>p.create('   '));await assert.rejects(()=>p.setPassword('123'));await p.setPassword('correct-password');assert(!w.localStorage.getItem(LOCK).includes('correct-password'));assert(await p.verify('correct-password'));assert(!(await p.verify('wrong')));
+ await assert.rejects(()=>p.setPassword('replacement-password','wrong'));assert(await p.verify('correct-password'));
+ let before=snapshot(w);await assert.rejects(()=>p.clearData('all','wrong'));assert.deepEqual(snapshot(w),before);
+ p.store.setItem('guitarCoachThemeV1','{"preset":"white"}');const seed=snapshot(w);seed[ACTIVE]=user.id;dom.window.close();dom=page(seed);w=dom.window;p=w.gcProfiles;
+ assert.equal(p.store.getItem(DATA),null);assert.equal(p.store.getItem(NOTE),null);assert.equal(p.dbName,'guitarCoachMediaV1-'+user.id);
+ p.store.setItem(DATA,'{"student":"A"}');p.store.setItem(NOTE,'[{"student":"A"}]');assert.equal(w.localStorage.getItem(DATA),legacy);assert.equal(w.localStorage.getItem(NOTE),note);assert.equal(w.localStorage.getItem(prefix(user.id)+DATA),'{"student":"A"}');
+ await media(w.indexedDB,p.dbName,'put');await media(w.indexedDB,'guitarCoachMediaV1','put');let flushes=0;w.gcNotebook={flush(){flushes++}};w.gcStopForReset=()=>p.store.setItem(DATA,'late-recording');await p.clearData('current','correct-password');
+ assert.equal(flushes,1);assert.equal(w.localStorage.getItem(prefix(user.id)+DATA),null);assert.equal(w.localStorage.getItem(prefix(user.id)+NOTE),null);assert.equal(w.localStorage.getItem(DATA),legacy);assert.equal(w.localStorage.getItem('otherSite'),'untouched');assert.equal((await media(w.indexedDB,p.dbName,'get')).length,0);assert.equal((await media(w.indexedDB,'guitarCoachMediaV1','get')).length,1);p.store.setItem(DATA,'late-timer');assert.equal(w.localStorage.getItem(prefix(user.id)+DATA),null);
+ const db=w.indexedDB,next=snapshot(w);dom.window.close();dom=page(next,db);w=dom.window;p=w.gcProfiles;await p.setPassword('replacement-password','correct-password');assert(!(await p.verify('correct-password')));await p.clearData('all','replacement-password');assert.equal(w.localStorage.getItem(DATA),null);assert.equal(w.localStorage.getItem(NOTE),null);assert.equal(w.localStorage.getItem(REG),null);assert.equal(w.localStorage.getItem(ACTIVE),null);assert(w.localStorage.getItem(LOCK));assert.equal(w.localStorage.getItem('otherSite'),'untouched');assert.equal((await media(db,'guitarCoachMediaV1','get')).length,0);dom.window.close();
+ // A page opened before another tab clears this profile cannot recreate stale data.
+ dom=page();w=dom.window;p=w.gcProfiles;w.localStorage.setItem('guitarCoachProfileEpoch:default','changed-in-another-tab');assert.equal(p.canWrite(),false);p.store.setItem(DATA,'stale');assert.equal(w.localStorage.getItem(DATA),null);dom.window.close();
+ // Integrate the actual app: all direct writes must honor the selected profile.
+ const full=new JSDOM(fs.readFileSync(path.join(root,'index.html'),'utf8'),{url:'https://example.test/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:new VirtualConsole()});const fw=full.window;
+ fw.HTMLElement.prototype.scrollIntoView=()=>{};fw.scrollTo=()=>{};fw.HTMLCanvasElement.prototype.getContext=()=>new Proxy({measureText:t=>({width:12})},{get:(t,k)=>t[k]||(()=>{})});fw.indexedDB=new IDBFactory();
+ fw.localStorage.setItem(REG,JSON.stringify([{id:'default',name:'Original'},{id:'u-student',name:'Student'}]));fw.localStorage.setItem(ACTIVE,'u-student');fw.localStorage.setItem(DATA,legacy);fw.localStorage.setItem(NOTE,note);
+ for(const name of ['user-profiles.js','app-core.js','app-v310.js','classroom-grid.js','classroom-theme-export.js'])fw.eval(fs.readFileSync(path.join(root,name),'utf8'));fw.gcProfiles.mount();
+ assert.equal(fw.document.documentElement.dataset.gcCoreReady,'true');fw.document.querySelector('[data-daily-check]').click();assert(fw.localStorage.getItem(prefix('u-student')+DATA));assert.equal(fw.localStorage.getItem(DATA),legacy);
+ fw.gcNotebook.replace([{id:'student-note',blocks:[]}]);fw.gcNotebook.flush();assert.equal(fw.localStorage.getItem(NOTE),note);assert.equal(JSON.parse(fw.localStorage.getItem(prefix('u-student')+NOTE))[0].id,'student-note');
+ fw.document.querySelector('#resetData').click();assert.equal(fw.document.querySelector('#gcResetDetails').open,true);assert(fw.document.querySelector('#page-progress').classList.contains('active'));assert.equal(fw.document.querySelector('#gcProfileSelect').value,'u-student');full.window.close();
+ console.log('PROFILES PASS: legacy byte preservation, independent users/media, duplicate/blank names, password setup/change/rejection, current/all scope, unrelated storage retained, late saves and stale tabs blocked');
+})().catch(e=>{console.error(e);process.exitCode=1});

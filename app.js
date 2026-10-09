@@ -1,7 +1,7 @@
 (() => {
   "use strict";
-  const RELEASE="navigation-20261010-4";
-  const files=["app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js"];
+  const RELEASE="profiles-20261010-7";
+  const files=["user-profiles.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js"];
   function showFailure(){
     if(document.getElementById("gcLoadFailure"))return;
     const banner=document.createElement("section");banner.id="gcLoadFailure";banner.setAttribute("role","alert");
@@ -11,7 +11,7 @@
   // Register even when dynamic loading starts after window.load has fired.
   if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).catch(e=>console.warn("Offline support unavailable",e));
   function next(){
-    const file=files.shift();if(!file)return;
+    const file=files.shift();if(!file){window.gcProfiles?.mount();return;}
     const script=document.createElement("script");script.src="./"+file+"?v="+RELEASE;
     script.onload=()=>{if(file==="app-core.js"&&document.documentElement.dataset.gcCoreReady!=="true"){showFailure();return}next()};
     script.onerror=()=>{console.error("Guitar Coach script load failed:",file);showFailure()};document.head.appendChild(script);
