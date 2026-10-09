@@ -1,15 +1,16 @@
 (() => {
   "use strict";
+  const storage=window.gcStorage;
   const STORE="guitarCoachClassroomNotebookV1",ACTIVE="guitarCoachClassroomActiveV1";
   let tool="●",barreStart=null,active=false,ready=false;
   const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c));
   const uid=()=>"cg-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
   const clone=v=>typeof structuredClone==="function"?structuredClone(v):JSON.parse(JSON.stringify(v));
-  const load=()=>{if(window.gcNotebook)return window.gcNotebook.list();try{const v=JSON.parse(localStorage.getItem(STORE)||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}};
+  const load=()=>{if(window.gcNotebook)return window.gcNotebook.list();try{const v=JSON.parse(storage.getItem(STORE)||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}};
   const saveList=list=>window.gcNotebook?window.gcNotebook.replace(list):localStorage.setItem(STORE,JSON.stringify(list));
-  function ctx(){const id=$("#teacherLessonForm")?.dataset.classroomNotebookId||localStorage.getItem(ACTIVE)||"",list=load();return{list,item:list.find(x=>x.id===id)||null}}
-  function commit(item,list){item.updatedAt=Date.now();const i=list.findIndex(x=>x.id===item.id);if(i>=0)list[i]=item;else list.push(item);saveList(list);const s=$("#classroomAutoSave");if(s){const d=new Date();s.textContent="已暫存 "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}}
+  function ctx(){const id=$("#teacherLessonForm")?.dataset.classroomNotebookId||storage.getItem(ACTIVE)||"",list=load();return{list,item:list.find(x=>x.id===id)||null}}
+  function commit(item,list){item.updatedAt=Date.now();const i=list.findIndex(x=>x.id===item.id);if(i>=0)list[i]=item;else list.push(item);saveList(list);const s=$("#classroomAutoSave");if(s&&!document.getElementById("gcStorageFailure")){const d=new Date();s.textContent="已暫存 "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}}
   function blocks(){return ctx().item?.blocks?.filter(b=>b.type==="chordgrid")||[]}
   function blank(name=""){return{id:uid(),type:"chordgrid",name,baseFret:1,top:Array(6).fill(""),cells:Array.from({length:5},()=>Array(6).fill("")),barres:[],memo:"",createdAt:Date.now()}}
   const defs={C:["X",3,2,0,1,0],G:[3,2,0,0,0,3],Am:["X",0,2,2,1,0],F:[1,3,3,2,1,1],D:["X","X",0,2,3,2],Dm:["X","X",0,2,3,1],E:[0,2,2,1,0,0],Em:[0,2,2,0,0,0],A:["X",0,2,2,2,0]};

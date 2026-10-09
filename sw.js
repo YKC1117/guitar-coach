@@ -1,5 +1,5 @@
-const CACHE="guitar-coach-recovery-20261010-2";
-const RELEASE="recovery-20261010-2";
+const CACHE="guitar-coach-recovery-20261010-3";
+const RELEASE="recovery-20261010-3";
 const FILES=["index.html","styles.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","styles-core.css","app.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","manifest.webmanifest","icon.svg"];
 const BASE=new URL("./",self.location.href);
 const ASSET_PATHS=new Set(FILES.map(name=>new URL(name,BASE).pathname));

@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const RELEASE="recovery-20261010-2";
+  const RELEASE="recovery-20261010-3";
   const files=["app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js"];
   function showFailure(){
     if(document.getElementById("gcLoadFailure"))return;

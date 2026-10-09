@@ -5,6 +5,19 @@ const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const STORE_KEY = "guitarCoachV2";
 const TEACHER_DRAFT_KEY = "guitarCoachTeacherDraftV1";
+// Storage restrictions must not stop navigation or notebook initialization.
+const storage=window.gcStorage={
+  warn(){
+    if(document.getElementById("gcStorageFailure"))return;
+    const banner=document.createElement("section");banner.id="gcStorageFailure";banner.setAttribute("role","alert");
+    banner.textContent="本機儲存目前無法使用。操作可以繼續，但新增內容可能無法保留；關閉頁面前請匯出備份。";
+    document.body.prepend(banner);
+  },
+  getItem(key){try{return window.localStorage.getItem(key)}catch(e){this.warn();return null}},
+  setPreference(key,value){try{window.localStorage.setItem(key,value);return true}catch(e){this.warn();return false}},
+  removePreference(key){try{window.localStorage.removeItem(key);return true}catch(e){this.warn();return false}}
+};
+
 function cloneData(value){return typeof window.structuredClone==="function"?window.structuredClone(value):JSON.parse(JSON.stringify(value))}
 const defaultState = {
   version:2, days:{}, totalMinutes:0, totalSwitches:0, tunerSessions:0,
@@ -116,9 +129,9 @@ function localDateKey(d=new Date()){
 }
 function loadState(){
   try{
-    const raw=JSON.parse(localStorage.getItem(STORE_KEY)||"null");
+    const raw=JSON.parse(storage.getItem(STORE_KEY)||"null");
     if(raw) return deepMerge(cloneData(defaultState),raw);
-    const old=JSON.parse(localStorage.getItem("guitarCoachV1")||"null");
+    const old=JSON.parse(storage.getItem("guitarCoachV1")||"null");
     if(old){
       return deepMerge(cloneData(defaultState),{
         days:old.days||{}, totalMinutes:old.totalMinutes||0, totalSwitches:old.totalSwitches||0,
@@ -136,7 +149,7 @@ function deepMerge(base,extra){
   }
   return base;
 }
-function saveState(){ localStorage.setItem(STORE_KEY,JSON.stringify(state)); renderShared(); }
+function saveState(){ try{localStorage.setItem(STORE_KEY,JSON.stringify(state))}catch(e){storage.warn()} renderShared(); }
 function dayState(key=localDateKey()){
   if(!state.days[key]) state.days[key]={tasks:[false,false,false,false],minutes:0,switches:0,sessions:0};
   if(!Array.isArray(state.days[key].tasks)) state.days[key].tasks=[false,false,false,false];
@@ -319,7 +332,7 @@ $("#openTeacherLogFromHome")?.addEventListener("click",openTeacherLog);
 $("#openTeacherPrep")?.addEventListener("click",openTeacherLog);
 
 function readTeacherDraft(){
-  try{return JSON.parse(localStorage.getItem(TEACHER_DRAFT_KEY)||"null")}catch(e){return null}
+  try{return JSON.parse(storage.getItem(TEACHER_DRAFT_KEY)||"null")}catch(e){return null}
 }
 function writeTeacherDraft(){
   if(!$("#teacherLessonForm")||$("#teacherLessonForm").classList.contains("hidden"))return;
@@ -339,7 +352,7 @@ function writeTeacherDraft(){
     mediaOwner:currentTeacherMediaOwner,
     savedAt:Date.now()
   };
-  localStorage.setItem(TEACHER_DRAFT_KEY,JSON.stringify(draft));
+  try{localStorage.setItem(TEACHER_DRAFT_KEY,JSON.stringify(draft))}catch(e){storage.warn();const status=$("#teacherDraftStatus");if(status)status.textContent="暫存失敗，請先匯出備份";return}
   const status=$("#teacherDraftStatus");
   if(status){
     const t=new Date();
@@ -685,7 +698,7 @@ $("#saveTeacherLesson")?.addEventListener("click",()=>{
   if(!Array.isArray(state.teacherLessons))state.teacherLessons=[];
   const idx=state.teacherLessons.findIndex(x=>x.id===id);
   if(idx>=0)state.teacherLessons[idx]=record;else state.teacherLessons.push(record);
-  localStorage.removeItem(TEACHER_DRAFT_KEY);
+  storage.removePreference(TEACHER_DRAFT_KEY);
   currentTeacherLessonId=null;
   $("#teacherLessonForm").classList.add("hidden");
   saveState();
@@ -1531,7 +1544,7 @@ $("#confirmFullRestore")?.addEventListener("click",async()=>{
         const item=obj.media[i];if(status)status.textContent="正在還原附件 "+(i+1)+" / "+obj.media.length+"…";
         await putLessonMedia({id:item.id||("media-"+Date.now()+"-"+i),lessonId:item.lessonId,type:item.type,blob:dataUrlToBlob(item.data),mimeType:item.mimeType||"",name:item.name||"",createdAt:item.createdAt||Date.now()});
       }
-      state=deepMerge(cloneData(defaultState),obj.appState);localStorage.setItem(STORE_KEY,JSON.stringify(state));localStorage.removeItem(TEACHER_DRAFT_KEY);
+      state=deepMerge(cloneData(defaultState),obj.appState);localStorage.setItem(STORE_KEY,JSON.stringify(state));storage.removePreference(TEACHER_DRAFT_KEY);
       renderShared();refreshTeacherStorageUsage();if(status)status.textContent="完整還原完成："+obj.media.length+" 個附件。";toast("完整備份已還原");resetRestorePreview();
     }catch(restoreError){
       await clearAllLessonMedia();for(const item of oldMedia)await putLessonMedia(item);state=oldState;localStorage.setItem(STORE_KEY,JSON.stringify(state));renderShared();throw restoreError;
@@ -1547,7 +1560,7 @@ $("#importData").onchange=async e=>{
   try{const obj=JSON.parse(await f.text());state=deepMerge(cloneData(defaultState),obj);saveState();toast("備份已匯入")}catch(err){toast("這個備份檔無法讀取")}
   e.target.value=""
 };
-$("#resetData").onclick=()=>{if(confirm("確定清除所有 Guitar Coach 練習紀錄與課堂附件？這無法復原。")){state=cloneData(defaultState);localStorage.removeItem(STORE_KEY);localStorage.removeItem(TEACHER_DRAFT_KEY);clearAllLessonMedia();saveState();toast("紀錄與本機附件已清除")}};
+$("#resetData").onclick=()=>{if(confirm("確定清除所有 Guitar Coach 練習紀錄與課堂附件？這無法復原。")){state=cloneData(defaultState);localStorage.removeItem(STORE_KEY);storage.removePreference(TEACHER_DRAFT_KEY);clearAllLessonMedia();saveState();toast("紀錄與本機附件已清除")}};
 
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;$("#installBtn").classList.remove("hidden")});
 $("#installBtn").onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;$("#installBtn").classList.add("hidden")};

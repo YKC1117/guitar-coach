@@ -1,5 +1,6 @@
 (() => {
   "use strict";
+  const storage=window.gcStorage;
 
   initClassroomNotebook();
 
@@ -11,9 +12,9 @@
     const TAB_KEY="guitarCoachNotebookTabV2";
     const PALETTE_KEY="guitarCoachStaffPaletteV2";
 
-    let activeTab=localStorage.getItem(TAB_KEY)||"quick";
+    let activeTab=storage.getItem(TAB_KEY)||"quick";
     if(!["quick","staff","tab","chords","rhythm","summary"].includes(activeTab))activeTab="quick";
-    let paletteTab=localStorage.getItem(PALETTE_KEY)||"common";
+    let paletteTab=storage.getItem(PALETTE_KEY)||"common";
     let selectedTabFret="0";
     let staffTool={kind:"none",duration:"quarter",accidental:"",dot:0,mark:"",label:"請先選擇符號"};
     let spanStart=null;
@@ -24,8 +25,8 @@
     const uid=()=>"nb-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
     const clone=v=>typeof structuredClone==="function"?structuredClone(v):JSON.parse(JSON.stringify(v));
     let notebookCache=null,saveTimer=null,dirty=false;
-    const load=()=>{if(notebookCache)return notebookCache;try{const v=JSON.parse(localStorage.getItem(STORE)||"[]");notebookCache=Array.isArray(v)?v:[]}catch(e){notebookCache=[]}return notebookCache};
-    function flush(){clearTimeout(saveTimer);saveTimer=null;if(!dirty)return;try{localStorage.setItem(STORE,JSON.stringify(load()));dirty=false;const status=$("#classroomAutoSave");if(status)status.textContent="已暫存 "+new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}catch(e){const status=$("#classroomAutoSave");if(status)status.textContent="暫存失敗，請先匯出備份";console.error("Notebook storage failed",e)}}
+    const load=()=>{if(notebookCache)return notebookCache;try{const v=JSON.parse(storage.getItem(STORE)||"[]");notebookCache=Array.isArray(v)?v:[]}catch(e){notebookCache=[]}return notebookCache};
+    function flush(){clearTimeout(saveTimer);saveTimer=null;if(!dirty)return;try{localStorage.setItem(STORE,JSON.stringify(load()));dirty=false;const status=$("#classroomAutoSave");if(status)status.textContent="已暫存 "+new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}catch(e){const status=$("#classroomAutoSave");if(status)status.textContent="暫存失敗，請先匯出備份";storage.warn();console.error("Notebook storage failed",e)}}
     const persist=list=>{notebookCache=list;dirty=true;clearTimeout(saveTimer);saveTimer=setTimeout(flush,180)};
     window.gcNotebook={list:load,replace:list=>{persist(list);flush()},flush};
     window.addEventListener("pagehide",flush);
@@ -37,10 +38,10 @@
     function getCurrent(create=true){
       const form=$("#teacherLessonForm");if(!form)return null;
       const list=load();
-      const id=form.dataset.classroomNotebookId||localStorage.getItem(ACTIVE)||"";
+      const id=form.dataset.classroomNotebookId||storage.getItem(ACTIVE)||"";
       let item=list.find(x=>x.id===id)||list.find(x=>same(x.signature,sig()));
       if(!item&&create){item={id:uid(),signature:sig(),blocks:[],createdAt:Date.now(),updatedAt:Date.now()};list.push(item);persist(list)}
-      if(item){form.dataset.classroomNotebookId=item.id;localStorage.setItem(ACTIVE,item.id)}
+      if(item){form.dataset.classroomNotebookId=item.id;storage.setPreference(ACTIVE,item.id)}
       return item||null;
     }
     function saveCurrent(blocks){
@@ -49,7 +50,7 @@
       const idx=list.findIndex(x=>x.id===item.id);
       const next={...item,signature:sig(),blocks:blocks??item.blocks,updatedAt:Date.now()};
       if(idx>=0)list[idx]=next;else list.push(next);
-      persist(list);form.dataset.classroomNotebookId=next.id;localStorage.setItem(ACTIVE,next.id);
+      persist(list);form.dataset.classroomNotebookId=next.id;storage.setPreference(ACTIVE,next.id);
       const status=$("#classroomAutoSave");
       if(status)status.textContent="待暫存"
     }
@@ -79,7 +80,7 @@
     ];
     function setTab(tab){
       if(!tabs.some(x=>x[0]===tab))tab="quick";
-      activeTab=tab;localStorage.setItem(TAB_KEY,tab);spanStart=null;staffTool={...staffTool,kind:"none",label:"請先選擇符號"};renderWorkspace();
+      activeTab=tab;storage.setPreference(TAB_KEY,tab);spanStart=null;staffTool={...staffTool,kind:"none",label:"請先選擇符號"};renderWorkspace();
     }
 
     function injectUI(){
@@ -118,9 +119,9 @@
     function prepareNotebook(mode){
       const form=$("#teacherLessonForm");if(!form||form.classList.contains("hidden"))return;
       staffTool={...staffTool,kind:"none",label:"請先選擇符號"};spanStart=null;
-      if(mode==="new"||mode==="seed"){form.dataset.classroomNotebookId="";localStorage.removeItem(ACTIVE)}
+      if(mode==="new"||mode==="seed"){form.dataset.classroomNotebookId="";storage.removePreference(ACTIVE)}
       const list=load(),match=list.find(x=>same(x.signature,sig()));
-      if(match){form.dataset.classroomNotebookId=match.id;localStorage.setItem(ACTIVE,match.id)}else getCurrent(true);
+      if(match){form.dataset.classroomNotebookId=match.id;storage.setPreference(ACTIVE,match.id)}else getCurrent(true);
       renderWorkspace();
       if(mode==="new"&&currentBlocks().length===0)addBlock("text");
     }
@@ -305,7 +306,7 @@
       });
     }
     function bindStaffControls(host){
-      $$('[data-palette-tab]',host).forEach(b=>b.onclick=()=>{paletteTab=b.dataset.paletteTab;localStorage.setItem(PALETTE_KEY,paletteTab);$$('.staff-palette',host).forEach(x=>x.outerHTML=staffPalette());bindStaffControls(host)});
+      $$('[data-palette-tab]',host).forEach(b=>b.onclick=()=>{paletteTab=b.dataset.paletteTab;storage.setPreference(PALETTE_KEY,paletteTab);$$('.staff-palette',host).forEach(x=>x.outerHTML=staffPalette());bindStaffControls(host)});
       $$('[data-staff-tool]',host).forEach(b=>b.onclick=()=>selectStaffTool(b.dataset.staffTool,b.dataset.toolValue,b.dataset.toolLabel));
       $$('[data-accidental]',host).forEach(b=>b.onclick=()=>{staffTool={...staffTool,accidental:b.dataset.accidental};syncStaffToolbar()});
       $$('[data-dot-count]',host).forEach(b=>b.onclick=()=>{staffTool={...staffTool,dot:+b.dataset.dotCount};syncStaffToolbar()});
