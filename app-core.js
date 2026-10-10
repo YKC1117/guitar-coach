@@ -19,6 +19,12 @@ const storage=window.gcStorage={
   removePreference(key){try{localStorage.removeItem(key);return true}catch(e){this.warn();return false}}
 };
 
+// Validate imported structures before merging or rendering; preserve safe unknown fields.
+const UNSAFE_KEYS=new Set(['__proto__','constructor','prototype']);
+function assertSafeData(root){let visited=0;function visit(value,depth){if(++visited>100000||depth>40)throw new Error('資料結構過大');if(!value||typeof value!=='object')return;for(const key of Object.keys(value)){if(UNSAFE_KEYS.has(key))throw new Error('不安全的資料欄位');visit(value[key],depth+1)}}visit(root,0);return root}
+function parseSafeData(text){return assertSafeData(JSON.parse(text))}
+window.gcSecurity={parse:parseSafeData,validate:assertSafeData};
+function validateStateShape(obj){assertSafeData(obj);if(!obj||typeof obj!=='object'||Array.isArray(obj))throw new Error('學習資料格式錯誤');for(const k of ['days','lessons','ear'])if(k in obj&&(!obj[k]||typeof obj[k]!=='object'||Array.isArray(obj[k])))throw new Error('練習資料格式錯誤');for(const k of ['teacherLessons','teacherPrepQuestions'])if(k in obj&&!Array.isArray(obj[k]))throw new Error('課堂格式錯誤');for(const r of obj.teacherLessons||[]){if(!r||typeof r!=='object')throw new Error('課堂格式錯誤');for(const k of ['homework','questions','tags'])if(k in r&&!Array.isArray(r[k]))throw new Error('課堂格式錯誤');for(const k of ['homework','questions'])if((r[k]||[]).some(x=>!x||typeof x!=='object'))throw new Error('課堂項目格式錯誤')}return obj}
 function cloneData(value){return typeof window.structuredClone==="function"?window.structuredClone(value):JSON.parse(JSON.stringify(value))}
 const defaultState = {
   version:2, days:{}, totalMinutes:0, totalSwitches:0, tunerSessions:0,
@@ -36,6 +42,7 @@ let mediaDbPromise=null;
 const mediaUrls=new Map();
 
 function openMediaDb(){
+  if(window.gcProfiles&&!window.gcProfiles.canRead())return Promise.reject(new Error("Profile is locked"));
   if(!("indexedDB" in window))return Promise.reject(new Error("IndexedDB unavailable"));
   if(mediaDbPromise)return mediaDbPromise;
   mediaDbPromise=new Promise((resolve,reject)=>{
@@ -131,9 +138,9 @@ function localDateKey(d=new Date()){
 }
 function loadState(){
   try{
-    const raw=JSON.parse(storage.getItem(STORE_KEY)||"null");
-    if(raw) return deepMerge(cloneData(defaultState),raw);
-    const old=JSON.parse(storage.getItem("guitarCoachV1")||"null");
+    const raw=parseSafeData(storage.getItem(STORE_KEY)||"null");
+    if(raw) return deepMerge(cloneData(defaultState),validateStateShape(raw));
+    const old=parseSafeData(storage.getItem("guitarCoachV1")||"null");
     if(old){
       return deepMerge(cloneData(defaultState),{
         days:old.days||{}, totalMinutes:old.totalMinutes||0, totalSwitches:old.totalSwitches||0,
@@ -144,7 +151,8 @@ function loadState(){
   return cloneData(defaultState);
 }
 function deepMerge(base,extra){
-  for(const k in extra){
+  for(const k of Object.keys(extra)){
+    if(UNSAFE_KEYS.has(k))throw new Error("不安全的資料欄位");
     if(extra[k] && typeof extra[k]==="object" && !Array.isArray(extra[k]) && base[k] && typeof base[k]==="object"){
       base[k]=deepMerge(base[k],extra[k]);
     }else base[k]=extra[k];
@@ -338,7 +346,7 @@ $("#openTeacherLogFromHome")?.addEventListener("click",openTeacherLog);
 $("#openTeacherPrep")?.addEventListener("click",openTeacherLog);
 
 function readTeacherDraft(){
-  try{return JSON.parse(storage.getItem(TEACHER_DRAFT_KEY)||"null")}catch(e){return null}
+  try{return parseSafeData(storage.getItem(TEACHER_DRAFT_KEY)||"null")}catch(e){return null}
 }
 function writeTeacherDraft(){
   if(!$("#teacherLessonForm")||$("#teacherLessonForm").classList.contains("hidden"))return;
@@ -1372,7 +1380,7 @@ $("#scaleRoot").onchange=renderFretboard;$("#scaleType").onchange=renderFretboar
 $("#fretboardGrid").onclick=e=>{const cell=e.target.closest("[data-fret-midi]");if(!cell)return;const midi=+cell.dataset.fretMidi;const freq=currentA4()*Math.pow(2,(midi-69)/12);tone(freq,.7,.16,"triangle")};
 function renderWeek(){
   const days=[];let total=0;
-  for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=localDateKey(d),min=state.days[k]?.minutes||0;total+=min;days.push({d,k,min,today:i===0})}
+  for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=localDateKey(d),min=Math.max(0,Number(state.days[k]?.minutes)||0);total+=min;days.push({d,k,min,today:i===0})}
   const max=Math.max(20,...days.map(x=>x.min));
   $("#weekChart").innerHTML=days.map(x=>`<div class="week-day ${x.today?"today":""}"><b>${x.min?x.min+"m":""}</b><div class="bar-track"><div class="bar-fill" style="height:${Math.max(2,x.min/max*100)}%"></div></div><small>${["日","一","二","三","四","五","六"][x.d.getDay()]}</small></div>`).join("");
   $("#weekMinutes").textContent=total+" 分鐘"
@@ -1442,15 +1450,22 @@ function dataUrlByteSize(dataUrl){
   try{return new TextEncoder().encode(decodeURIComponent(body)).length}catch(e){return body.length}
 }
 function validateBackupShape(obj){
+  assertSafeData(obj);validateStateShape(obj.appState);
   if(!obj||obj.format!=="guitar-coach-full-backup")throw new Error("不是 Guitar Coach 完整備份");
   if(![1,2].includes(obj.version))throw new Error("不支援的備份版本");
   if(!obj.appState||typeof obj.appState!=="object")throw new Error("缺少學習資料");
   if(!Array.isArray(obj.media))throw new Error("附件格式錯誤");
+  if(obj.media.length>2000)throw new Error("附件過多");
+  let mediaBytes=0;
   for(const item of obj.media){
     if(!item||typeof item!=="object")throw new Error("附件資料損壞");
     if(!["image","audio"].includes(item.type))throw new Error("附件類型錯誤");
     if(typeof item.data!=="string"||!item.data.startsWith("data:"))throw new Error("附件內容不完整");
-    if(!item.lessonId)throw new Error("附件缺少課堂識別");
+    if(typeof item.lessonId!=='string'||!item.lessonId)throw new Error("附件缺少課堂識別");
+    const comma=item.data.indexOf(','),head=item.data.slice(0,comma),mime=head.slice(5).split(';')[0].toLowerCase();
+    const allowed=item.type==='image'?/^image\/(jpeg|png|webp|gif|avif|bmp|heic|heif)$/:/^audio\/(webm|mp4|mpeg|wav|x-wav|ogg|aac|x-m4a|flac)$/;
+    if(comma<0||head.length>256||!head.endsWith(';base64')||!allowed.test(mime)||!/^[A-Za-z0-9+/]*={0,2}$/.test(item.data.slice(comma+1)))throw new Error('附件含不支援或可執行內容');
+    const bytes=dataUrlByteSize(item.data);mediaBytes+=bytes;if(bytes>50*1024*1024||mediaBytes>150*1024*1024)throw new Error('附件超過安全容量限制');
   }
   return true;
 }
@@ -1473,7 +1488,7 @@ function renderRestorePreview(obj,fileName,integrity,mediaBytes){
   const badge=$("#restoreIntegrity"),note=$("#restorePreviewNote"),confirm=$("#confirmFullRestore");
   badge.classList.remove("ok","warn","bad");
   if(integrity==="verified"){
-    badge.textContent="完整性驗證通過";
+    badge.textContent="內容完整性一致（非來源認證）";
     badge.classList.add("ok");
     note.textContent="備份內容完整。確認內容正確後再還原；按下確認前不會修改目前裝置資料。";
     confirm.disabled=false;
@@ -1526,7 +1541,8 @@ $("#importFullBackup")?.addEventListener("change",async e=>{
   const status=$("#fullBackupStatus");pendingFullRestore=null;$("#confirmFullRestore").disabled=true;
   try{
     if(status)status.textContent="正在檢查完整備份…";
-    const obj=JSON.parse(await file.text());validateBackupShape(obj);
+    if(file.size>200*1024*1024)throw new Error("備份檔過大");
+    const obj=parseSafeData(await file.text());validateBackupShape(obj);
     let mediaBytes=0;for(const item of obj.media)mediaBytes+=dataUrlByteSize(item.data);
     let integrity="legacy";
     if(obj.version===2&&obj.integrity?.algorithm==="SHA-256"&&obj.integrity?.checksum){
@@ -1568,7 +1584,7 @@ $("#exportData").onclick=()=>{
 };
 $("#importData").onchange=async e=>{
   const f=e.target.files?.[0];if(!f)return;
-  try{const obj=JSON.parse(await f.text());state=deepMerge(cloneData(defaultState),obj);saveState();toast("備份已匯入")}catch(err){toast("這個備份檔無法讀取")}
+  try{if(f.size>10*1024*1024)throw new Error("備份檔過大");const obj=validateStateShape(parseSafeData(await f.text()));if(!confirm("只覆蓋目前使用者的練習與課堂紀錄，確定匯入？"))return;state=deepMerge(cloneData(defaultState),obj);saveState();toast("備份已匯入")}catch(err){toast("這個備份檔無法讀取")}
   e.target.value=""
 };
 $("#resetData").onclick=()=>window.gcProfiles?.openReset();

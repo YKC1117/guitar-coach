@@ -26,7 +26,7 @@ const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.g
     const uid=()=>"nb-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
     const clone=v=>typeof structuredClone==="function"?structuredClone(v):JSON.parse(JSON.stringify(v));
     let notebookCache=null,saveTimer=null,dirty=false;
-    const load=()=>{if(notebookCache)return notebookCache;try{const v=JSON.parse(storage.getItem(STORE)||"[]");notebookCache=Array.isArray(v)?v:[]}catch(e){notebookCache=[]}return notebookCache};
+    const load=()=>{if(notebookCache)return notebookCache;try{const v=(window.gcSecurity?.parse||JSON.parse)(storage.getItem(STORE)||"[]");notebookCache=Array.isArray(v)?v:[]}catch(e){notebookCache=[]}return notebookCache};
     function flush(){clearTimeout(saveTimer);saveTimer=null;if(!dirty)return;try{localStorage.setItem(STORE,JSON.stringify(load()));dirty=false;const status=$("#classroomAutoSave");if(status)status.textContent="已暫存 "+new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}catch(e){const status=$("#classroomAutoSave");if(status)status.textContent="暫存失敗，請先匯出備份";storage.warn();console.error("Notebook storage failed",e)}}
     const persist=list=>{notebookCache=list;dirty=true;clearTimeout(saveTimer);saveTimer=setTimeout(flush,180)};
     window.gcNotebook={list:load,replace:list=>{persist(list);flush()},flush};
@@ -132,8 +132,8 @@ const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.g
       nav.innerHTML=tabs.map(([id,label,icon])=>`<button type="button" class="${activeTab===id?"active":""}" data-nb-tab="${id}"><b>${icon}</b><span>${label}</span></button>`).join("");
       $$("[data-nb-tab]",nav).forEach(b=>b.onclick=()=>setTab(b.dataset.nbTab));
     }
-    function blockShell(b,title,body){return `<article class="classroom-block" data-block-id="${b.id}"><header><strong>${title}</strong><div class="block-actions"><button type="button" data-clone-block="${b.id}" aria-label="複製">⧉</button><button type="button" class="block-delete" data-delete-block="${b.id}" aria-label="刪除">×</button></div></header>${body}</article>`}
-    const memoHtml=b=>`<label class="block-memo"><span>備註</span><input data-block-memo="${b.id}" value="${esc(b.memo||"")}" placeholder="老師補充、練習重點…"></label>`;
+    function blockShell(b,title,body){return `<article class="classroom-block" data-block-id="${esc(b.id)}"><header><strong>${title}</strong><div class="block-actions"><button type="button" data-clone-block="${esc(b.id)}" aria-label="複製">⧉</button><button type="button" class="block-delete" data-delete-block="${esc(b.id)}" aria-label="刪除">×</button></div></header>${body}</article>`}
+    const memoHtml=b=>`<label class="block-memo"><span>備註</span><input data-block-memo="${esc(b.id)}" value="${esc(b.memo||"")}" placeholder="老師補充、練習重點…"></label>`;
     function pageHead(title,desc,type,label){return `<div class="workspace-head"><div><h3>${title}</h3><p>${desc}</p></div>${type?`<button type="button" class="workspace-add" data-page-add="${type}">＋ ${label}</button>`:""}</div>`}
 
     function renderWorkspace(){
@@ -156,7 +156,7 @@ const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.g
     }
     function emptyState(type,label){return `<div class="classroom-empty"><strong>還沒有${label}</strong><span>按右上角「＋ 新增」開始。</span><button type="button" data-page-add="${type}">＋ 新增${label}</button></div>`}
 
-    function renderTextBlocks(){const list=blocksOf("text");return list.length?`<div class="classroom-blocks">${list.map(b=>blockShell(b,"快速筆記",`<textarea data-text-block="${b.id}" rows="6" placeholder="老師現在講什麼就直接打…">${esc(b.text||"")}</textarea>`)).join("")}</div>`:emptyState("text","速記")}
+    function renderTextBlocks(){const list=blocksOf("text");return list.length?`<div class="classroom-blocks">${list.map(b=>blockShell(b,"快速筆記",`<textarea data-text-block="${esc(b.id)}" rows="6" placeholder="老師現在講什麼就直接打…">${esc(b.text||"")}</textarea>`)).join("")}</div>`:emptyState("text","速記")}
 
     const noteGlyph={whole:"𝅝",half:"𝅗𝅥",quarter:"♩",eighth:"♪",sixteenth:"♬",thirtysecond:"♬"};
     const restGlyph={whole:"𝄻",half:"𝄼",quarter:"𝄽",eighth:"𝄾",sixteenth:"𝄿",thirtysecond:"𝄿"};
@@ -224,23 +224,23 @@ const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.g
     function accidentalGlyph(a){return {sharp:"♯",flat:"♭",natural:"♮",doubleSharp:"×",doubleFlat:"♭♭"}[a]||""}
     function markGlyph(mark){const map={staccato:"•",accent:">",marcato:"^",tenuto:"—",fermata:"𝄐",breath:",",caesura:"//",tuplet3:"3",tuplet5:"5",tuplet6:"6",tuplet7:"7",segno:"𝄋",coda:"𝄌",mordent:"mord.",turn:"turn",DC:"D.C.",DS:"D.S.","RH-p":"p","RH-i":"i","RH-m":"m","RH-a":"a"};return map[mark]||mark}
     function itemHtml(it,i){
-      if(it.kind==="bar")return `<i class="staff-symbol barline ${esc(it.mark||"single")}" data-staff-item="${i}" style="left:${it.x}%"></i>`;
+      if(it.kind==="bar")return `<i class="staff-symbol barline ${esc(it.mark||"single")}" data-staff-item="${i}" style="left:${Number(it.x)||0}%"></i>`;
       if(it.kind==="span"){const left=Math.min(it.x,it.x2),right=Math.max(it.x,it.x2),top=(it.y+it.y2)/2;return `<i class="staff-span ${esc(it.mark)}" data-staff-item="${i}" style="left:${left}%;width:${Math.max(3,right-left)}%;top:${top}%"><span>${it.mark==="cresc"?"<":it.mark==="dim"?">":""}</span></i>`}
-      if(it.kind==="mark")return `<i class="staff-symbol staff-mark" data-staff-item="${i}" style="left:${it.x}%;top:${it.y}%">${esc(markGlyph(it.mark))}</i>`;
+      if(it.kind==="mark")return `<i class="staff-symbol staff-mark" data-staff-item="${i}" style="left:${Number(it.x)||0}%;top:${Number(it.y)||0}%">${esc(markGlyph(it.mark))}</i>`;
       const glyph=it.kind==="rest"?(restGlyph[it.duration]||"𝄽"):(noteGlyph[it.duration]||"♩");
-      return `<i class="staff-symbol ${it.kind} dur-${it.duration}" data-staff-item="${i}" style="left:${it.x}%;top:${it.y}%"><span class="acc">${accidentalGlyph(it.accidental)}</span><span class="glyph">${glyph}</span>${it.dot?`<span class="dot">${"•".repeat(it.dot)}</span>`:""}</i>`;
+      return `<i class="staff-symbol ${esc(it.kind)} dur-${esc(it.duration)}" data-staff-item="${i}" style="left:${Number(it.x)||0}%;top:${Number(it.y)||0}%"><span class="acc">${accidentalGlyph(it.accidental)}</span><span class="glyph">${glyph}</span>${Number(it.dot)?`<span class="dot">${"•".repeat(Math.max(0,Math.min(2,Number(it.dot)||0)))}</span>`:""}</i>`;
     }
     function staffHtml(b){
       const items=normalizeStaffItems(b),clef=b.clef||"treble",meter=b.meter??"",key=b.key||"C";
       return blockShell(b,"五線譜",`${staffPalette()}
         <div class="staff-settings">
-          <label>譜號<select data-staff-clef="${b.id}"><option value="treble" ${clef==="treble"?"selected":""}>高音譜號</option><option value="bass" ${clef==="bass"?"selected":""}>低音譜號</option></select></label>
-          <label>調號<select data-staff-key="${b.id}">${Object.entries(keyLabels).map(([k,l])=>`<option value="${k}" ${key===k?"selected":""}>${l}</option>`).join("")}</select></label>
-          <label>拍號<select data-staff-meter="${b.id}"><option value="" ${meter===""?"selected":""}>未設定</option>${["4/4","3/4","2/4","6/8","9/8","12/8","5/4","7/8","C","¢"].map(x=>`<option ${meter===x?"selected":""}>${x}</option>`).join("")}</select></label>
-          <div class="staff-history"><button type="button" data-staff-undo="${b.id}">↶ 復原</button><button type="button" data-staff-redo="${b.id}">↷ 重做</button><button type="button" data-clear-staff="${b.id}">清空</button></div>
+          <label>譜號<select data-staff-clef="${esc(b.id)}"><option value="treble" ${clef==="treble"?"selected":""}>高音譜號</option><option value="bass" ${clef==="bass"?"selected":""}>低音譜號</option></select></label>
+          <label>調號<select data-staff-key="${esc(b.id)}">${Object.entries(keyLabels).map(([k,l])=>`<option value="${k}" ${key===k?"selected":""}>${l}</option>`).join("")}</select></label>
+          <label>拍號<select data-staff-meter="${esc(b.id)}"><option value="" ${meter===""?"selected":""}>未設定</option>${["4/4","3/4","2/4","6/8","9/8","12/8","5/4","7/8","C","¢"].map(x=>`<option ${meter===x?"selected":""}>${x}</option>`).join("")}</select></label>
+          <div class="staff-history"><button type="button" data-staff-undo="${esc(b.id)}">↶ 復原</button><button type="button" data-staff-redo="${esc(b.id)}">↷ 重做</button><button type="button" data-clear-staff="${esc(b.id)}">清空</button></div>
         </div>
         <div class="staff-help">先選工具，再直接連點譜面。音符會吸附在線／間；擦除模式點符號即可刪除。</div>
-        <div class="staff-canvas advanced" data-staff="${b.id}">
+        <div class="staff-canvas advanced" data-staff="${esc(b.id)}">
           <span class="clef">${clef==="bass"?"𝄢":"𝄞"}</span><span class="key-signature">${keySymbol(key)}</span><span class="time-signature">${esc(meter)}</span>
           ${items.map(itemHtml).join("")}
         </div>${memoHtml(b)}`);
@@ -335,7 +335,7 @@ const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.g
 
     function tabHtml(b){
       const labels=["e","B","G","D","A","E"],cells=b.cells||Array.from({length:6},()=>Array(16).fill(""));
-      const rows=cells.map((row,r)=>`<div class="tab-row" style="--tab-cols:${row.length}"><b>${labels[r]}</b>${row.map((v,c)=>`<button type="button" data-tab-cell="${b.id}" data-r="${r}" data-c="${c}">${esc(v)}</button>`).join("")}</div>`).join("");
+      const rows=cells.map((row,r)=>`<div class="tab-row" style="--tab-cols:${row.length}"><b>${labels[r]}</b>${row.map((v,c)=>`<button type="button" data-tab-cell="${esc(b.id)}" data-r="${r}" data-c="${c}">${esc(v)}</button>`).join("")}</div>`).join("");
       return blockShell(b,"TAB 六線譜",`<div class="tab-fast-frets"><span>格數</span>${Array.from({length:13},(_,i)=>`<button type="button" class="${selectedTabFret===String(i)?"active":""}" data-tab-quick-fret="${i}">${i}</button>`).join("")}<button type="button" class="${selectedTabFret===""?"active":""}" data-tab-quick-fret="erase">擦</button></div><div class="tab-tools"><label>其他格 <input type="number" min="0" max="24" inputmode="numeric" value="${selectedTabFret===""?"":esc(selectedTabFret)}" data-tab-fret></label><span>選一次後可連續填入</span></div><div class="tab-grid">${rows}</div>${memoHtml(b)}`);
     }
     function renderTabBlocks(){const list=blocksOf("tab");return list.length?`<div class="classroom-blocks">${list.map(tabHtml).join("")}</div>`:emptyState("tab","TAB")}
@@ -347,7 +347,7 @@ const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.g
 
     function chordsHtml(b){
       const palette=["C","Cm","C7","Cmaj7","D","Dm","D7","E","Em","E7","F","Fm","Fmaj7","G","Gm","G7","A","Am","A7","B","Bm","B7"];
-      return blockShell(b,"和弦進行",`<div class="chord-sequence">${(b.items||[]).map((x,i)=>`<button type="button" data-remove-chord="${b.id}" data-index="${i}">${esc(x)}</button>`).join("")||"<span>點下面和弦快速加入</span>"}</div><div class="chord-palette">${palette.map(x=>`<button type="button" data-add-chord="${b.id}" data-chord="${x}">${x}</button>`).join("")}</div><div class="custom-chord"><input placeholder="自訂，例如 Asus4" data-chord-input="${b.id}"><button type="button" data-custom-chord="${b.id}">加入</button></div>${memoHtml(b)}`);
+      return blockShell(b,"和弦進行",`<div class="chord-sequence">${(b.items||[]).map((x,i)=>`<button type="button" data-remove-chord="${esc(b.id)}" data-index="${i}">${esc(x)}</button>`).join("")||"<span>點下面和弦快速加入</span>"}</div><div class="chord-palette">${palette.map(x=>`<button type="button" data-add-chord="${esc(b.id)}" data-chord="${x}">${x}</button>`).join("")}</div><div class="custom-chord"><input placeholder="自訂，例如 Asus4" data-chord-input="${esc(b.id)}"><button type="button" data-custom-chord="${esc(b.id)}">加入</button></div>${memoHtml(b)}`);
     }
     function renderChordBlocks(){const list=blocksOf("chords");return list.length?`<div class="classroom-blocks">${list.map(chordsHtml).join("")}</div>`:emptyState("chords","和弦段")}
     function bindChordEvents(host){
@@ -356,7 +356,7 @@ const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.g
       $$('[data-custom-chord]',host).forEach(x=>x.onclick=()=>{const input=host.querySelector(`[data-chord-input="${x.dataset.customChord}"]`),v=input?.value.trim();if(!v)return;const b=currentBlocks().find(q=>q.id===x.dataset.customChord);if(!b)return;updateBlock(b.id,{items:[...(b.items||[]),v]});renderWorkspace()});
     }
 
-    function rhythmHtml(b){return blockShell(b,"節奏",`<div class="rhythm-settings"><label>BPM <input type="number" min="30" max="240" value="${b.bpm||70}" data-rhythm-bpm="${b.id}"></label><label>拍號 <select data-rhythm-meter="${b.id}">${["4/4","3/4","2/4","6/8","12/8"].map(x=>`<option ${b.meter===x?"selected":""}>${x}</option>`).join("")}</select></label></div><div class="rhythm-beats">${(b.beats||Array(8).fill("")).map((v,i)=>`<button type="button" data-rhythm-beat="${b.id}" data-index="${i}"><small>${i+1}</small><strong>${esc(v)||"○"}</strong></button>`).join("")}</div><small class="rhythm-help">每格連點循環：空白 → ↓ 下刷 → ↑ 上刷 → · 不刷 → × 悶音</small>${memoHtml(b)}`)}
+    function rhythmHtml(b){return blockShell(b,"節奏",`<div class="rhythm-settings"><label>BPM <input type="number" min="30" max="240" value="${Number(b.bpm)||70}" data-rhythm-bpm="${esc(b.id)}"></label><label>拍號 <select data-rhythm-meter="${esc(b.id)}">${["4/4","3/4","2/4","6/8","12/8"].map(x=>`<option ${b.meter===x?"selected":""}>${x}</option>`).join("")}</select></label></div><div class="rhythm-beats">${(b.beats||Array(8).fill("")).map((v,i)=>`<button type="button" data-rhythm-beat="${esc(b.id)}" data-index="${i}"><small>${i+1}</small><strong>${esc(v)||"○"}</strong></button>`).join("")}</div><small class="rhythm-help">每格連點循環：空白 → ↓ 下刷 → ↑ 上刷 → · 不刷 → × 悶音</small>${memoHtml(b)}`)}
     function renderRhythmBlocks(){const list=blocksOf("rhythm");return list.length?`<div class="classroom-blocks">${list.map(rhythmHtml).join("")}</div>`:emptyState("rhythm","節奏")}
     function bindRhythmEvents(host){
       $$('[data-rhythm-bpm]',host).forEach(x=>x.onchange=()=>updateBlock(x.dataset.rhythmBpm,{bpm:Math.max(30,Math.min(240,+x.value||70))}));
@@ -371,7 +371,7 @@ const localStorage=window.gcProfiles?.store||{getItem:key=>window.localStorage.g
       if(b.type==="staff"){const items=normalizeStaffItems(b);text=items.length?`五線譜：${items.length} 個記號、${keyLabels[b.key||"C"]||b.key||"C"}、${b.meter||"未設定拍號"}`:""}
       if(b.type==="tab"){const s=tabSummary(b);if(s)text=`TAB：${s}`}
       if(b.type==="chords"&&(b.items||[]).length)text=`和弦：${b.items.join(" → ")}`;
-      if(b.type==="rhythm"){const marks=(b.beats||[]).filter(Boolean).join(" ");text=`節奏：${b.bpm||70} BPM、${b.meter||"未設定拍號"}${marks?"、"+marks:""}`}
+      if(b.type==="rhythm"){const marks=(b.beats||[]).filter(Boolean).join(" ");text=`節奏：${Number(b.bpm)||70} BPM、${b.meter||"未設定拍號"}${marks?"、"+marks:""}`}
       if(b.memo?.trim())text+=(text?"；":"")+b.memo.trim();
       return text;
     }

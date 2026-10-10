@@ -1,6 +1,6 @@
 import fs from "node:fs";
 
-const runtimeFiles=["index.html","app.js","styles.css","manifest.webmanifest","sw.js"];
+const runtimeFiles=["index.html","app.js","app-core.js","app-v310.js","user-profiles.js","classroom-grid.js","classroom-theme-export.js","styles.css","styles-core.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","manifest.webmanifest","sw.js"];
 const sources=Object.fromEntries(runtimeFiles.map(file=>[file,fs.readFileSync(file,"utf8")]));
 const failures=[];
 
@@ -12,10 +12,10 @@ function has(file,rule,re){
 
 for(const file of runtimeFiles){
   has(file,"external http(s) URL",/https?:\/\/\S+/i);
-  has(file,"protocol-relative external URL",/["']\/\/[^"']+/i);
+  has(file,"protocol-relative external URL",/["']\/\/[a-z0-9][^"'\s]+/i);
 }
 
-for(const file of ["index.html","app.js"]){
+for(const file of runtimeFiles.filter(file=>file==="index.html"||file.endsWith(".js")&&file!=="sw.js")){
   has(file,"fetch() is not allowed in app code",/\bfetch\s*\(/);
   has(file,"XMLHttpRequest is not allowed",/\bXMLHttpRequest\b/);
   has(file,"WebSocket is not allowed",/\bWebSocket\s*\(/);

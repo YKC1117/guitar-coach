@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const RELEASE="profiles-20261010-8";
+  const RELEASE="security-20261010-9";
   const files=["user-profiles.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js"];
   function showFailure(){
     if(document.getElementById("gcLoadFailure"))return;
@@ -13,7 +13,7 @@
   function next(){
     const file=files.shift();if(!file){window.gcProfiles?.mount();return;}
     const script=document.createElement("script");script.src="./"+file+"?v="+RELEASE;
-    script.onload=()=>{if(file==="app-core.js"&&document.documentElement.dataset.gcCoreReady!=="true"){showFailure();return}next()};
+    script.onload=()=>{if(file==="app-core.js"&&document.documentElement.dataset.gcCoreReady!=="true"){showFailure();return}if(file==="user-profiles.js"){if(!window.gcProfiles){showFailure();return}window.gcProfiles.ready.then(next,showFailure)}else next()};
     script.onerror=()=>{console.error("Guitar Coach script load failed:",file);showFailure()};document.head.appendChild(script);
   }
   next();

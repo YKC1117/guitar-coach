@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "test": "node recovery-regression.cjs && node dom-regression.cjs && node profile-regression.cjs"
+    "test": "node recovery-regression.cjs && node dom-regression.cjs && node profile-regression.cjs && node security-regression.cjs"
   },
   "dependencies": {
     "jsdom": "30.1.2",
