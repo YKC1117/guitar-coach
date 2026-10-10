@@ -1,6 +1,6 @@
 import fs from "node:fs";
 
-const runtimeFiles=["index.html","app.js","app-core.js","app-v310.js","user-profiles.js","classroom-grid.js","classroom-theme-export.js","styles.css","styles-core.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","manifest.webmanifest","sw.js"];
+const runtimeFiles=["index.html","app.js","app-core.js","app-v310.js","user-profiles.js","local-admin.js","classroom-grid.js","classroom-theme-export.js","styles.css","styles-core.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","manifest.webmanifest","sw.js"];
 const sources=Object.fromEntries(runtimeFiles.map(file=>[file,fs.readFileSync(file,"utf8")]));
 const failures=[];
 

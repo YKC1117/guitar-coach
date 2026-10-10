@@ -1,6 +1,6 @@
-@import url("./styles-v310.css?v=security-20261010-9");
-@import url("./classroom-v311.css?v=security-20261010-9");
-@import url("./classroom-theme-export.css?v=security-20261010-9");
+@import url("./styles-v310.css?v=admin-20261010-10");
+@import url("./classroom-v311.css?v=admin-20261010-10");
+@import url("./classroom-theme-export.css?v=admin-20261010-10");
 
 :is(#gcLoadFailure,#gcStorageFailure){margin:12px;padding:12px;border:1px solid var(--danger);border-radius:12px;background:var(--surface);color:var(--text)}:is(#gcLoadFailure,#gcStorageFailure) p{margin:0 0 8px}:is(#gcLoadFailure,#gcStorageFailure) button{padding:8px 14px;border:1px solid var(--line);border-radius:8px}
 
@@ -50,3 +50,12 @@ html[data-gc-theme] .topbar .brand{background:transparent!important;color:var(--
 .gc-unlock-dialog::backdrop{background:rgb(0 0 0 / .5)}
 .gc-unlock-dialog input{display:block;box-sizing:border-box;width:100%;min-height:44px;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit}
 .gc-unlock-dialog button{min-height:44px;padding:8px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit}
+
+/* Local manager shares the complete theme palette. */
+.gc-admin-panel{margin-top:20px;padding-top:18px;border-top:1px solid var(--line-2);color:var(--text)}
+.gc-admin-panel label{display:block;margin:10px 0}.gc-admin-panel input[type=password]{display:block;width:100%;margin-top:6px}
+.gc-admin-panel [data-admin-users]{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.gc-admin-panel [data-admin-users] label{display:flex;align-items:center;gap:10px;margin:0;padding:10px;border:1px solid var(--line-2);border-radius:12px;background:var(--surface-2)}
+.gc-admin-panel input[type=checkbox]{width:20px;height:20px;flex:none}.gc-admin-panel fieldset{border:1px solid var(--line-2);border-radius:14px;padding:14px}
+.gc-admin-panel [hidden]{display:none!important}.gc-trash-row{padding:12px 0;border-bottom:1px solid var(--line-2)}.gc-trash-row button{margin:4px}
+.gc-admin-panel [data-admin-file]{max-width:100%}.gc-admin-panel[data-busy=true] button{pointer-events:none;opacity:.65}
