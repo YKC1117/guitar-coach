@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const RELEASE="adminname-20261013-12";
+  const RELEASE="perfhotfix-20261013-13";
   const files=["user-profiles.js","profile-launcher.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js","data-management-ux.js","navigation-ux.js","focus-ux.js","beginner-flow-ux.js","chord-coach-ux.js","finger-drill-ux.js","right-hand-coach-ux.js"];
   function showFailure(){
     if(document.getElementById("gcLoadFailure"))return;
