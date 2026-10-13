@@ -21,27 +21,23 @@
     wrap.dataset.gcChordCoach="1";
     const panel=document.createElement("section");panel.className="gc-chord-coach";
     const rows=info.fingers.map(([n,label,string,fret])=>`<div class="gc-finger-step"><b>${n}</b><span><strong>${esc(label)}</strong><small>第 ${string} 弦 · 第 ${fret} 品</small></span></div>`).join("");
-    panel.innerHTML=`
-      <div class="gc-chord-orientation"><span>看圖方向</span><strong>左邊＝6 弦最粗　→　右邊＝1 弦最細</strong></div>
-      <div class="gc-chord-strum"><span class="gc-strum-arrow">↓</span><div><small>右手從哪裡開始</small><strong>${esc(info.play)}</strong></div></div>
-      <div class="gc-chord-steps"><div class="gc-chord-steps-head"><span>左手照這個順序放</span><small>圓圈數字就是你的手指編號</small></div>${rows}</div>
-      <div class="gc-chord-anchor"><strong>新手技巧</strong><span>${esc(info.anchor)}</span></div>
-      <details class="gc-clean-check"><summary>按好了但聲音悶？照這 4 步檢查</summary><ol><li>每條應該要響的弦，先一條一條撥。</li><li>悶音時先把指尖立起來，不要立刻更用力。</li><li>手指靠近品絲後方，但不要壓在金屬品絲正上方。</li><li>確認手掌或其他手指沒有碰到旁邊的弦。</li></ol></details>`;
+    panel.innerHTML=`<div class="gc-chord-orientation"><span>看圖方向</span><strong>左邊＝6 弦最粗　→　右邊＝1 弦最細</strong></div><div class="gc-chord-strum"><span class="gc-strum-arrow">↓</span><div><small>右手從哪裡開始</small><strong>${esc(info.play)}</strong></div></div><div class="gc-chord-steps"><div class="gc-chord-steps-head"><span>左手照這個順序放</span><small>圓圈數字就是你的手指編號</small></div>${rows}</div><div class="gc-chord-anchor"><strong>新手技巧</strong><span>${esc(info.anchor)}</span></div><details class="gc-clean-check"><summary>按好了但聲音悶？照這 4 步檢查</summary><ol><li>每條應該要響的弦，先一條一條撥。</li><li>悶音時先把指尖立起來，不要立刻更用力。</li><li>手指靠近品絲後方，但不要壓在金屬品絲正上方。</li><li>確認手掌或其他手指沒有碰到旁邊的弦。</li></ol></details>`;
     wrap.appendChild(panel);
   }
 
-  function enhanceAll(){
-    const page=document.getElementById("page-beginner");if(!page)return;
-    page.querySelectorAll(".bz-chord-wrap").forEach(enhanceChord);
+  function enhanceVisible(){
+    const page=document.getElementById("page-beginner");
+    if(!page||!page.classList.contains("active"))return;
+    page.querySelectorAll(".bz-lesson-body:not([hidden]) .bz-chord-wrap").forEach(enhanceChord);
   }
 
   function mount(){
     if(document.documentElement.dataset.gcChordCoach==="1")return;
     document.documentElement.dataset.gcChordCoach="1";
-    enhanceAll();
     document.addEventListener("click",e=>{
-      if(e.target.closest(".bz-entry,[data-gc-hub='beginner'],[data-gc-next],[data-bz-stage],.bz-lesson-head,[data-bz-done]"))setTimeout(enhanceAll,45);
+      if(e.target.closest(".bz-entry,[data-gc-hub='beginner'],[data-gc-next],[data-bz-stage],.bz-lesson-head,[data-bz-done]"))setTimeout(enhanceVisible,30);
     });
+    if(document.getElementById("page-beginner")?.classList.contains("active"))setTimeout(enhanceVisible,0);
   }
-  window.gcChordCoachUX={mount,refresh:enhanceAll};
+  window.gcChordCoachUX={mount,refresh:enhanceVisible};
 })();
