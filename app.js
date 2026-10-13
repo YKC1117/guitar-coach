@@ -1,7 +1,7 @@
 (() => {
   "use strict";
-  const RELEASE="admin-20261010-10";
-  const files=["user-profiles.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js"];
+  const RELEASE="beginner-20261013-1";
+  const files=["user-profiles.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js"];
   function showFailure(){
     if(document.getElementById("gcLoadFailure"))return;
     const banner=document.createElement("section");banner.id="gcLoadFailure";banner.setAttribute("role","alert");
