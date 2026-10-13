@@ -1,6 +1,6 @@
-const CACHE="guitar-coach-chordcoach-20261013-8";
-const RELEASE="chordcoach-20261013-8";
-const FILES=["index.html","styles.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","beginner-zone.css","data-management-ux.css","profile-launcher.css","navigation-ux.css","focus-ux.css","beginner-flow-ux.css","chord-coach-ux.css","styles-core.css","app.js","user-profiles.js","profile-launcher.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js","data-management-ux.js","navigation-ux.js","focus-ux.js","beginner-flow-ux.js","chord-coach-ux.js","manifest.webmanifest","icon.svg"];
+const CACHE="guitar-coach-fingerdrill-20261013-9";
+const RELEASE="fingerdrill-20261013-9";
+const FILES=["index.html","styles.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","beginner-zone.css","data-management-ux.css","profile-launcher.css","navigation-ux.css","focus-ux.css","beginner-flow-ux.css","chord-coach-ux.css","finger-drill-ux.css","styles-core.css","app.js","user-profiles.js","profile-launcher.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js","data-management-ux.js","navigation-ux.js","focus-ux.js","beginner-flow-ux.js","chord-coach-ux.js","finger-drill-ux.js","manifest.webmanifest","icon.svg"];
 const BASE=new URL("./",self.location.href);
 const ASSET_PATHS=new Set(FILES.map(name=>new URL(name,BASE).pathname));
 self.addEventListener("install",e=>{
