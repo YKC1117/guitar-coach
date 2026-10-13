@@ -34,7 +34,7 @@
       }
     }
     const adminButton=document.querySelector(".gc-data-admin");
-    if(adminButton)adminButton.hidden=true;
+    if(adminButton)adminButton.hidden=false;
     const admin=document.getElementById("gcAdminPanel");
     if(admin&&!document.documentElement.classList.contains("gc-owner-tools-visible"))admin.hidden=true;
   }
@@ -108,7 +108,7 @@
     overlay=document.createElement("section");overlay.className="gc-launcher";overlay.setAttribute("aria-modal","true");overlay.setAttribute("role","dialog");
     overlay.innerHTML=`<div class="gc-launch-card">
       ${canClose?'<button type="button" class="gc-launch-close" aria-label="關閉">×</button>':''}
-      <button type="button" class="gc-launch-brand" data-owner-gesture aria-label="管理員入口">G</button>
+      <div class="gc-launch-brand" aria-hidden="true">G</div>
       <span class="kicker">WHO'S PLAYING?</span>
       <h1>今天誰要使用？</h1>
       <p class="gc-launch-sub">先選自己的使用者，筆記、練習紀錄和照片才不會混在一起。每天第一次使用會再確認一次。</p>
@@ -120,7 +120,6 @@
     overlay.querySelector("[data-launch-add]").onclick=addUser;
     overlay.querySelector("[data-launch-new-name]").addEventListener("keydown",e=>{if(e.key==="Enter")addUser()});
     overlay.querySelector(".gc-launch-close")?.addEventListener("click",closeChooser);
-    bindOwnerGesture(overlay.querySelector("[data-owner-gesture]"));
     hideOwnerFromExistingUi();
   }
 
@@ -129,8 +128,8 @@
     const p=owner();
     const dialog=document.createElement("dialog");dialog.id="gcOwnerEntry";dialog.className="gc-owner-entry";
     dialog.innerHTML=p
-      ?'<h2>管理員入口</h2><p>「管理員」是獨立的隱藏管理使用者，不會出現在一般使用者清單。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-enter>進入管理員</button></div>'
-      :'<h2>建立管理員</h2><p>管理員只用來開啟管理工具；建立後會隱藏。你的「可樂」可以照常當一般使用者使用。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-create>建立管理員</button></div>';
+      ?'<h2>管理員入口</h2><p>「管理員」是獨立的管理使用者，不會出現在一般使用者清單。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-enter>進入管理員</button></div>'
+      :'<h2>建立管理員</h2><p>管理員只用來開啟管理工具；建立後不會出現在一般使用者清單。你的「可樂」可以照常當一般使用者使用。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-create>建立管理員</button></div>';
     document.body.appendChild(dialog);
     const close=()=>{if(dialog.open)dialog.close();dialog.remove()};
     dialog.querySelector("[data-owner-cancel]").onclick=close;
@@ -140,12 +139,6 @@
     dialog.showModal();
   }
 
-  function bindOwnerGesture(el){
-    if(!el||el.dataset.ownerBound==="1")return;
-    el.dataset.ownerBound="1";
-    el.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();openOwnerEntry()});
-  }
-
   function showOwnerTools(){
     document.documentElement.classList.add("gc-owner-tools-visible");
     const admin=document.getElementById("gcAdminPanel");if(admin)admin.hidden=false;
@@ -153,7 +146,6 @@
 
   function afterMount(){
     hideOwnerFromExistingUi();
-    const brand=document.querySelector(".topbar .brand .logo")||document.querySelector(".topbar .brand");bindOwnerGesture(brand);
     const current=profiles().find(p=>p.id===window.gcProfiles?.currentId);
     if(current?.name===OWNER_NAME)showOwnerTools();
   }
