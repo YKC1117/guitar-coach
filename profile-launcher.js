@@ -108,7 +108,7 @@
     overlay=document.createElement("section");overlay.className="gc-launcher";overlay.setAttribute("aria-modal","true");overlay.setAttribute("role","dialog");
     overlay.innerHTML=`<div class="gc-launch-card">
       ${canClose?'<button type="button" class="gc-launch-close" aria-label="關閉">×</button>':''}
-      <div class="gc-launch-brand" data-owner-gesture aria-hidden="true">G</div>
+      <button type="button" class="gc-launch-brand" data-owner-gesture aria-label="管理員入口">G</button>
       <span class="kicker">WHO'S PLAYING?</span>
       <h1>今天誰要使用？</h1>
       <p class="gc-launch-sub">先選自己的使用者，筆記、練習紀錄和照片才不會混在一起。每天第一次使用會再確認一次。</p>
@@ -125,8 +125,8 @@
   }
 
   function openOwnerEntry(){
+    if(document.getElementById("gcOwnerEntry"))return;
     const p=owner();
-    const old=document.getElementById("gcOwnerEntry");if(old)old.remove();
     const dialog=document.createElement("dialog");dialog.id="gcOwnerEntry";dialog.className="gc-owner-entry";
     dialog.innerHTML=p
       ?'<h2>管理員入口</h2><p>「管理員」是獨立的隱藏管理使用者，不會出現在一般使用者清單。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-enter>進入管理員</button></div>'
@@ -141,11 +141,9 @@
   }
 
   function bindOwnerGesture(el){
-    if(!el||el.dataset.ownerBound==="1")return;el.dataset.ownerBound="1";
-    let timer=null;
-    const start=()=>{clearTimeout(timer);timer=setTimeout(openOwnerEntry,1800)};
-    const cancel=()=>{clearTimeout(timer);timer=null};
-    el.addEventListener("pointerdown",start);["pointerup","pointercancel","pointerleave"].forEach(n=>el.addEventListener(n,cancel));
+    if(!el||el.dataset.ownerBound==="1")return;
+    el.dataset.ownerBound="1";
+    el.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();openOwnerEntry()});
   }
 
   function showOwnerTools(){
