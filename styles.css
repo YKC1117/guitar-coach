@@ -1,6 +1,7 @@
-@import url("./styles-v310.css?v=admin-20261010-10");
-@import url("./classroom-v311.css?v=admin-20261010-10");
-@import url("./classroom-theme-export.css?v=admin-20261010-10");
+@import url("./styles-v310.css?v=beginner-20261013-1");
+@import url("./classroom-v311.css?v=beginner-20261013-1");
+@import url("./classroom-theme-export.css?v=beginner-20261013-1");
+@import url("./beginner-zone.css?v=beginner-20261013-1");
 
 :is(#gcLoadFailure,#gcStorageFailure){margin:12px;padding:12px;border:1px solid var(--danger);border-radius:12px;background:var(--surface);color:var(--text)}:is(#gcLoadFailure,#gcStorageFailure) p{margin:0 0 8px}:is(#gcLoadFailure,#gcStorageFailure) button{padding:8px 14px;border:1px solid var(--line);border-radius:8px}
 
