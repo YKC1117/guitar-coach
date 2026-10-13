@@ -1,14 +1,15 @@
-@import url("./styles-v310.css?v=fingerdrill-20261013-9");
-@import url("./classroom-v311.css?v=fingerdrill-20261013-9");
-@import url("./classroom-theme-export.css?v=fingerdrill-20261013-9");
-@import url("./beginner-zone.css?v=fingerdrill-20261013-9");
-@import url("./data-management-ux.css?v=fingerdrill-20261013-9");
-@import url("./profile-launcher.css?v=fingerdrill-20261013-9");
-@import url("./navigation-ux.css?v=fingerdrill-20261013-9");
-@import url("./focus-ux.css?v=fingerdrill-20261013-9");
-@import url("./beginner-flow-ux.css?v=fingerdrill-20261013-9");
-@import url("./chord-coach-ux.css?v=fingerdrill-20261013-9");
-@import url("./finger-drill-ux.css?v=fingerdrill-20261013-9");
+@import url("./styles-v310.css?v=righthand-20261013-10");
+@import url("./classroom-v311.css?v=righthand-20261013-10");
+@import url("./classroom-theme-export.css?v=righthand-20261013-10");
+@import url("./beginner-zone.css?v=righthand-20261013-10");
+@import url("./data-management-ux.css?v=righthand-20261013-10");
+@import url("./profile-launcher.css?v=righthand-20261013-10");
+@import url("./navigation-ux.css?v=righthand-20261013-10");
+@import url("./focus-ux.css?v=righthand-20261013-10");
+@import url("./beginner-flow-ux.css?v=righthand-20261013-10");
+@import url("./chord-coach-ux.css?v=righthand-20261013-10");
+@import url("./finger-drill-ux.css?v=righthand-20261013-10");
+@import url("./right-hand-coach-ux.css?v=righthand-20261013-10");
 
 :is(#gcLoadFailure,#gcStorageFailure){margin:12px;padding:12px;border:1px solid var(--danger);border-radius:12px;background:var(--surface);color:var(--text)}:is(#gcLoadFailure,#gcStorageFailure) p{margin:0 0 8px}:is(#gcLoadFailure,#gcStorageFailure) button{padding:8px 14px;border:1px solid var(--line);border-radius:8px}
 
