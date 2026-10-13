@@ -1,0 +1,22 @@
+.gc-legacy-reset{display:none!important}
+.gc-data-hub{margin-top:22px;padding-top:20px;border-top:1px solid var(--line-2)}
+.gc-data-hub-copy h3{margin:4px 0 6px;font-size:19px}.gc-data-hub-copy p{margin:0;color:var(--muted)}
+.gc-data-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.gc-data-actions button{display:flex;min-height:74px;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;padding:14px 15px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line-2)}
+.gc-data-actions button span{font-weight:800;font-size:15px}.gc-data-actions button small{margin-top:4px;color:var(--muted);line-height:1.45}
+.gc-data-own{border-color:color-mix(in srgb,var(--danger) 35%,var(--line-2))!important}.gc-data-own span{color:var(--danger)}
+.gc-clear-dialog{box-sizing:border-box;width:min(520px,calc(100vw - 28px));max-height:min(760px,calc(100vh - 32px));overflow:auto;padding:22px;border:1px solid var(--line);border-radius:22px;background:var(--surface);color:var(--text);box-shadow:0 24px 80px rgb(0 0 0 / .26)}
+.gc-clear-dialog::backdrop{background:rgb(0 0 0 / .52);backdrop-filter:blur(3px)}
+.gc-clear-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.gc-clear-head h2{margin:4px 0 0;font-size:22px;line-height:1.3}
+.gc-clear-close{width:42px;min-width:42px;height:42px;padding:0!important;border-radius:50%!important;font-size:25px!important;line-height:1;background:var(--surface-2)!important}
+.gc-clear-warning{margin-top:18px;padding:14px 15px;border:1px solid color-mix(in srgb,var(--danger) 30%,var(--line));border-radius:16px;background:color-mix(in srgb,var(--danger) 6%,var(--surface))}
+.gc-clear-warning strong{display:block;color:var(--text);font-size:15px}.gc-clear-warning p{margin:6px 0 0;color:var(--muted);line-height:1.65}
+.gc-clear-flow{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:18px 0 4px;overflow:auto;color:var(--muted);font-size:12px;white-space:nowrap}
+.gc-clear-flow span{display:flex;align-items:center;gap:6px}.gc-clear-flow b,.gc-admin-guide b{display:grid;place-items:center;width:24px;height:24px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--text);font-size:12px}.gc-clear-flow i{font-style:normal;color:var(--line)}
+.gc-clear-password{display:grid;gap:8px;margin-top:18px;font-weight:750}.gc-clear-password input{box-sizing:border-box;width:100%;min-height:50px;margin:0!important;padding:0 13px;border:1px solid var(--line);border-radius:13px;background:var(--surface-2);color:var(--text);font:inherit}
+.gc-clear-note{margin:12px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.gc-clear-status{min-height:22px;margin:10px 0 0;color:var(--danger);font-weight:700}
+.gc-clear-actions{display:grid;grid-template-columns:1fr 1.3fr;gap:10px;margin-top:12px}.gc-clear-actions button{min-height:48px;border-radius:13px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);font:inherit;font-weight:750}.gc-clear-confirm{background:var(--danger)!important;border-color:var(--danger)!important;color:white!important}.gc-clear-confirm:disabled{opacity:.65}
+.gc-admin-panel>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:8px 0;font-weight:800}.gc-admin-panel>summary small{color:var(--muted);font-weight:600;font-size:12px}
+.gc-admin-guide{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0 12px}.gc-admin-guide span{display:flex;align-items:center;gap:7px;padding:10px;border:1px solid var(--line-2);border-radius:12px;background:var(--surface-2);font-size:12px;color:var(--muted)}
+.gc-admin-selected{margin:8px 0 12px!important;font-weight:750;color:var(--text)!important}.gc-admin-panel [data-recycle]{border-color:color-mix(in srgb,var(--danger) 45%,var(--line))!important;color:var(--danger)!important;font-weight:800}
+@media(max-width:620px){.gc-data-actions{grid-template-columns:1fr}.gc-clear-dialog{padding:18px}.gc-clear-flow{justify-content:flex-start}.gc-admin-guide{grid-template-columns:1fr}.gc-clear-actions{grid-template-columns:1fr}.gc-admin-panel>summary{align-items:flex-start;flex-direction:column}}
