@@ -1,6 +1,6 @@
-const CACHE="guitar-coach-profile-20261013-4";
-const RELEASE="profile-20261013-4";
-const FILES=["index.html","styles.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","beginner-zone.css","data-management-ux.css","profile-launcher.css","styles-core.css","app.js","user-profiles.js","profile-launcher.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js","data-management-ux.js","manifest.webmanifest","icon.svg"];
+const CACHE="guitar-coach-uxflow-20261013-5";
+const RELEASE="uxflow-20261013-5";
+const FILES=["index.html","styles.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","beginner-zone.css","data-management-ux.css","profile-launcher.css","navigation-ux.css","styles-core.css","app.js","user-profiles.js","profile-launcher.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js","data-management-ux.js","navigation-ux.js","manifest.webmanifest","icon.svg"];
 const BASE=new URL("./",self.location.href);
 const ASSET_PATHS=new Set(FILES.map(name=>new URL(name,BASE).pathname));
 self.addEventListener("install",e=>{
