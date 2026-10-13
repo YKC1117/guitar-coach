@@ -54,16 +54,8 @@
     if(progress){progress.textContent=`${index+1} / ${seq.length}`;progress.style.setProperty("--p",`${Math.round((index+1)/seq.length*100)}%`)}
   }
 
-  function next(){
-    const seq=sequence();
-    index=(index+1)%seq.length;
-    renderStep();
-  }
-  function prev(){
-    const seq=sequence();
-    index=(index-1+seq.length)%seq.length;
-    renderStep();
-  }
+  function next(){const seq=sequence();index=(index+1)%seq.length;renderStep()}
+  function prev(){const seq=sequence();index=(index-1+seq.length)%seq.length;renderStep()}
   function restart(){index=0;renderStep()}
 
   function intervalMs(){
@@ -83,7 +75,7 @@
   function rebuildTimer(){if(running){clearInterval(timer);timer=setInterval(next,intervalMs())}}
 
   function gridHtml(){
-    return strings.map(stringNo=>`<div class="fd-string-row" data-fd-string="${stringNo}"><b>${stringNo}弦</b>${frets.map((fret,i)=>`<button type="button" class="fd-cell" data-fd-cell="${stringNo}-${fret}" data-index="${i}"><span>${fret}品</span><i>${i+1}</i></button>`).join("")}</div>`).join("");
+    return strings.map(stringNo=>`<div class="fd-string-row" data-fd-string="${stringNo}"><b>${stringNo}弦</b>${frets.map((fret,i)=>`<button type="button" class="fd-cell" data-fd-cell="${stringNo}-${fret}"><span>${fret}品</span><i>${i+1}</i></button>`).join("")}</div>`).join("");
   }
 
   function createCoach(){
@@ -119,13 +111,12 @@
     root.querySelector("[data-fd-next]").onclick=()=>{stop();next()};
     root.querySelector("[data-fd-restart]").onclick=()=>{stop();restart()};
     root.querySelector("[data-fd-bpm]").onchange=rebuildTimer;
-    root.querySelector("[data-fd-mode]").onchange=e=>{stop();mode=e.target.value;restart();const desc=root.querySelector(".fd-direction span");if(desc)desc.textContent=mode==="roundtrip"?"6弦 → 1弦，再從1弦倒著回到6弦":"6弦 → 1弦，每條弦都是 1-2-3-4"};
+    root.querySelector("[data-fd-mode]").onchange=e=>{stop();mode=e.target.value;restart();const desc=root.querySelector(".fd-direction span");if(desc)desc.textContent=mode==="roundtrip"?"6弦 → 1弦，再從 1 弦倒著回到 6 弦":"6弦 → 1弦，每條弦都是 1-2-3-4"};
     root.addEventListener("click",e=>{
       const cell=e.target.closest("[data-fd-cell]");if(!cell)return;
       stop();
       const [stringNo,fret]=cell.dataset.fdCell.split("-").map(Number);
-      const seq=sequence();
-      const found=seq.findIndex(s=>s.stringNo===stringNo&&s.fret===fret);
+      const found=sequence().findIndex(s=>s.stringNo===stringNo&&s.fret===fret);
       if(found>=0){index=found;renderStep()}
     });
     return root;
@@ -145,6 +136,7 @@
     document.documentElement.dataset.gcFingerDrill="1";
     enhance();
     document.addEventListener("click",e=>{
+      if(e.target.closest("[data-bz-stage],[data-bz-done],[data-bz-back]"))stop();
       if(e.target.closest("[data-bz-stage],.bz-entry,[data-gc-hub='beginner'],[data-gc-next],[data-bz-done]"))setTimeout(enhance,40);
     });
     document.addEventListener("visibilitychange",()=>{if(document.hidden)stop()});
