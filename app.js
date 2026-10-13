@@ -1,7 +1,7 @@
 (() => {
   "use strict";
-  const RELEASE="fingerdrill-20261013-9";
-  const files=["user-profiles.js","profile-launcher.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js","data-management-ux.js","navigation-ux.js","focus-ux.js","beginner-flow-ux.js","chord-coach-ux.js","finger-drill-ux.js"];
+  const RELEASE="righthand-20261013-10";
+  const files=["user-profiles.js","profile-launcher.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js","data-management-ux.js","navigation-ux.js","focus-ux.js","beginner-flow-ux.js","chord-coach-ux.js","finger-drill-ux.js","right-hand-coach-ux.js"];
   function showFailure(){
     if(document.getElementById("gcLoadFailure"))return;
     const banner=document.createElement("section");banner.id="gcLoadFailure";banner.setAttribute("role","alert");
@@ -10,7 +10,7 @@
   }
   if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).catch(e=>console.warn("Offline support unavailable",e));
   function next(){
-    const file=files.shift();if(!file){window.gcProfiles?.mount();window.gcAdmin?.mount();window.gcDataUX?.mount();window.gcProfileLauncher?.afterMount();window.gcNavUX?.mount();window.gcFocusUX?.mount();window.gcBeginnerFlowUX?.mount();window.gcChordCoachUX?.mount();window.gcFingerDrillUX?.mount();return;}
+    const file=files.shift();if(!file){window.gcProfiles?.mount();window.gcAdmin?.mount();window.gcDataUX?.mount();window.gcProfileLauncher?.afterMount();window.gcNavUX?.mount();window.gcFocusUX?.mount();window.gcBeginnerFlowUX?.mount();window.gcChordCoachUX?.mount();window.gcFingerDrillUX?.mount();window.gcRightHandCoachUX?.mount();return;}
     const script=document.createElement("script");script.src="./"+file+"?v="+RELEASE;
     script.onload=()=>{if(file==="app-core.js"&&document.documentElement.dataset.gcCoreReady!=="true"){showFailure();return}if(file==="local-admin.js"){if(!window.gcProfiles||!window.gcAdmin){showFailure();return}window.gcAdmin.mount();window.gcProfiles.ready.then(next,showFailure)}else next()};
     script.onerror=()=>{console.error("Guitar Coach script load failed:",file);showFailure()};document.head.appendChild(script);
