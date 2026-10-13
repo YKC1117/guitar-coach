@@ -1,6 +1,6 @@
-const CACHE="guitar-coach-beginner-20261013-1";
-const RELEASE="beginner-20261013-1";
-const FILES=["index.html","styles.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","beginner-zone.css","styles-core.css","app.js","user-profiles.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js","manifest.webmanifest","icon.svg"];
+const CACHE="guitar-coach-ux-20261013-2";
+const RELEASE="ux-20261013-2";
+const FILES=["index.html","styles.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","beginner-zone.css","data-management-ux.css","styles-core.css","app.js","user-profiles.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js","data-management-ux.js","manifest.webmanifest","icon.svg"];
 const BASE=new URL("./",self.location.href);
 const ASSET_PATHS=new Set(FILES.map(name=>new URL(name,BASE).pathname));
 self.addEventListener("install",e=>{
@@ -18,7 +18,6 @@ self.addEventListener("install",e=>{
 });
 self.addEventListener("activate",e=>{
   e.waitUntil((async()=>{
-    // This origin can host other projects; only retire Guitar Coach caches.
     const keys=await caches.keys();await Promise.all(keys.filter(key=>key.startsWith("guitar-coach-")&&key!==CACHE).map(key=>caches.delete(key)));
     await self.clients.claim();
   })());
@@ -42,14 +41,12 @@ self.addEventListener("fetch",e=>{
       const response=await fetch(e.request);
       if(usable(response,navigation?"index.html":url.pathname)){
         const canonical=new URL(navigation?"index.html":url.pathname,BASE);
-        // Cache updates must finish before a worker may be terminated.
         e.waitUntil(cache.put(canonical.href,response.clone()));return response;
       }
     }catch(e){}
     const canonical=new URL(navigation?"index.html":url.pathname,BASE);
     const cached=await cache.match(canonical.href);
     if(usable(cached,navigation?"index.html":url.pathname))return cached;
-    // Never return HTML as a JavaScript or stylesheet response.
     return new Response("Offline asset unavailable",{status:503,headers:{"Content-Type":"text/plain"}});
   })());
 });
