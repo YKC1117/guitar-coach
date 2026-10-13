@@ -105,7 +105,7 @@
     if(overlay||(!force&&chosenThisSession())||!window.gcProfiles)return;
     const canClose=force&&chosenThisSession();
     document.documentElement.classList.add("gc-launch-lock");
-    overlay=document.createElement("section\");overlay.className="gc-launcher";overlay.setAttribute("aria-modal","true");overlay.setAttribute("role","dialog");
+    overlay=document.createElement("section");overlay.className="gc-launcher";overlay.setAttribute("aria-modal","true");overlay.setAttribute("role","dialog");
     overlay.innerHTML=`<div class="gc-launch-card">
       ${canClose?'<button type="button" class="gc-launch-close" aria-label="關閉">×</button>':''}
       <div class="gc-launch-brand" data-owner-gesture aria-hidden="true">G</div>
