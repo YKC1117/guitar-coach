@@ -1,11 +1,12 @@
-@import url("./styles-v310.css?v=focusux-20261013-6");
-@import url("./classroom-v311.css?v=focusux-20261013-6");
-@import url("./classroom-theme-export.css?v=focusux-20261013-6");
-@import url("./beginner-zone.css?v=focusux-20261013-6");
-@import url("./data-management-ux.css?v=focusux-20261013-6");
-@import url("./profile-launcher.css?v=focusux-20261013-6");
-@import url("./navigation-ux.css?v=focusux-20261013-6");
-@import url("./focus-ux.css?v=focusux-20261013-6");
+@import url("./styles-v310.css?v=beginnerflow-20261013-7");
+@import url("./classroom-v311.css?v=beginnerflow-20261013-7");
+@import url("./classroom-theme-export.css?v=beginnerflow-20261013-7");
+@import url("./beginner-zone.css?v=beginnerflow-20261013-7");
+@import url("./data-management-ux.css?v=beginnerflow-20261013-7");
+@import url("./profile-launcher.css?v=beginnerflow-20261013-7");
+@import url("./navigation-ux.css?v=beginnerflow-20261013-7");
+@import url("./focus-ux.css?v=beginnerflow-20261013-7");
+@import url("./beginner-flow-ux.css?v=beginnerflow-20261013-7");
 
 :is(#gcLoadFailure,#gcStorageFailure){margin:12px;padding:12px;border:1px solid var(--danger);border-radius:12px;background:var(--surface);color:var(--text)}:is(#gcLoadFailure,#gcStorageFailure) p{margin:0 0 8px}:is(#gcLoadFailure,#gcStorageFailure) button{padding:8px 14px;border:1px solid var(--line);border-radius:8px}
 
