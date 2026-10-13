@@ -1,16 +1,21 @@
 (() => {
   "use strict";
-  const SESSION_KEY="guitarCoachSessionUserChosenV1";
+  const SESSION_KEY="guitarCoachSessionUserChosenV2";
   const OWNER_NAME="可樂";
   let overlay=null;
 
   const profiles=()=>window.gcProfiles?.list?.()||[];
   const owner=()=>profiles().find(p=>String(p.name).trim()===OWNER_NAME)||null;
   const visibleProfiles=()=>profiles().filter(p=>String(p.name).trim()!==OWNER_NAME);
-  const esc=v=>String(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+  const esc=v=>String(v).replace(/[&<>'\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'\"':"&quot;"}[c]));
+  const today=()=>{
+    const d=new Date();
+    return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
+  };
+  const sessionValue=(id=window.gcProfiles?.currentId)=>`${today()}|${id||""}`;
 
-  function chosenThisSession(){try{return sessionStorage.getItem(SESSION_KEY)==="1"}catch(e){return false}}
-  function markChosen(){try{sessionStorage.setItem(SESSION_KEY,"1")}catch(e){}}
+  function chosenThisSession(){try{return sessionStorage.getItem(SESSION_KEY)===sessionValue()}catch(e){return false}}
+  function markChosen(id=window.gcProfiles?.currentId){try{sessionStorage.setItem(SESSION_KEY,sessionValue(id))}catch(e){}}
   function unmarkChosen(){try{sessionStorage.removeItem(SESSION_KEY)}catch(e){}}
 
   function hideOwnerFromExistingUi(){
@@ -18,7 +23,16 @@
       if(o.textContent.trim()===OWNER_NAME)o.remove();
     });
     const badge=document.querySelector(".gc-user-switch");
-    if(badge&&badge.textContent.includes(OWNER_NAME))badge.hidden=true;
+    const current=profiles().find(p=>p.id===window.gcProfiles?.currentId);
+    if(badge){
+      if(current?.name===OWNER_NAME){badge.hidden=true;}
+      else{
+        badge.hidden=false;
+        badge.textContent=`使用者：${current?.name||"未選擇"}　切換`;
+        badge.title="切換今天使用網站的人";
+        badge.onclick=()=>openChooser(true);
+      }
+    }
     const adminButton=document.querySelector(".gc-data-admin");
     if(adminButton)adminButton.hidden=true;
     const admin=document.getElementById("gcAdminPanel");
@@ -29,11 +43,11 @@
     if(!window.gcProfiles)return;
     const current=window.gcProfiles.currentId;
     if(id===current&&window.gcProfiles.canRead?.()){
-      markChosen();closeChooser();return;
+      markChosen(id);closeChooser();hideOwnerFromExistingUi();return;
     }
-    markChosen();
+    markChosen(id);
     let reloaded=false;
-    const timer=setTimeout(()=>{if(!reloaded)unmarkChosen()},1200);
+    const timer=setTimeout(()=>{if(!reloaded)unmarkChosen()},1500);
     try{
       await window.gcProfiles.switchTo(id);
       reloaded=true;
@@ -75,20 +89,23 @@
     for(const p of rows){
       const button=document.createElement("button");button.type="button";button.className="gc-launch-user";button.dataset.userId=p.id;
       const active=p.id===window.gcProfiles.currentId;
-      button.innerHTML=`<span class="gc-launch-avatar">${esc((p.name||"使").slice(0,1))}</span><span class="gc-launch-user-copy"><strong>${esc(p.name)}</strong><small>${active?"上次使用":"點一下進入"}</small></span><span class="gc-launch-arrow">›</span>`;
+      button.innerHTML=`<span class="gc-launch-avatar">${esc((p.name||"使").slice(0,1))}</span><span class="gc-launch-user-copy"><strong>${esc(p.name)}</strong><small>${active?"上次使用｜點一下繼續":"點一下進入"}</small></span><span class="gc-launch-arrow">›</span>`;
+      if(active)button.classList.add("is-last");
       button.onclick=()=>choose(p.id);box.appendChild(button);
     }
   }
 
-  function openChooser(){
-    if(overlay||chosenThisSession()||!window.gcProfiles)return;
+  function openChooser(force=false){
+    if(overlay||(!force&&chosenThisSession())||!window.gcProfiles)return;
+    const canClose=force&&chosenThisSession();
     document.documentElement.classList.add("gc-launch-lock");
     overlay=document.createElement("section");overlay.className="gc-launcher";overlay.setAttribute("aria-modal","true");overlay.setAttribute("role","dialog");
     overlay.innerHTML=`<div class="gc-launch-card">
+      ${canClose?'<button type="button" class="gc-launch-close" aria-label="關閉">×</button>':''}
       <div class="gc-launch-brand" data-owner-gesture aria-hidden="true">G</div>
       <span class="kicker">WHO'S PLAYING?</span>
       <h1>今天誰要使用？</h1>
-      <p class="gc-launch-sub">先選自己的使用者，筆記、練習紀錄和照片才不會混在一起。</p>
+      <p class="gc-launch-sub">先選自己的使用者，筆記、練習紀錄和照片才不會混在一起。每天第一次使用會再確認一次。</p>
       <div class="gc-launch-users" data-launch-users></div>
       <details class="gc-launch-add"><summary>＋ 新增使用者</summary><div class="gc-launch-add-row"><input data-launch-new-name maxlength="40" placeholder="輸入名稱" autocomplete="off"><button type="button" data-launch-add>建立</button></div></details>
       <p class="gc-launch-status" data-launch-status role="status"></p>
@@ -96,6 +113,7 @@
     document.body.appendChild(overlay);renderCards();
     overlay.querySelector("[data-launch-add]").onclick=addUser;
     overlay.querySelector("[data-launch-new-name]").addEventListener("keydown",e=>{if(e.key==="Enter")addUser()});
+    overlay.querySelector(".gc-launch-close")?.addEventListener("click",closeChooser);
     bindOwnerGesture(overlay.querySelector("[data-owner-gesture]"));
     hideOwnerFromExistingUi();
   }
@@ -109,7 +127,7 @@
     const close=()=>{dialog.close();dialog.remove()};
     dialog.querySelector("[data-owner-cancel]").onclick=close;
     dialog.addEventListener("cancel",e=>{e.preventDefault();close()});
-    dialog.querySelector("[data-owner-enter]").onclick=async()=>{markChosen();if(p.id===window.gcProfiles.currentId&&window.gcProfiles.canRead?.()){close();closeChooser();showOwnerTools();return}close();await choose(p.id)};
+    dialog.querySelector("[data-owner-enter]").onclick=async()=>{markChosen(p.id);if(p.id===window.gcProfiles.currentId&&window.gcProfiles.canRead?.()){close();closeChooser();showOwnerTools();return}close();await choose(p.id)};
     dialog.showModal();
   }
 
@@ -137,6 +155,11 @@
     hideOwnerFromExistingUi();
     if(!chosenThisSession())openChooser();
   }
+
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden||!window.gcProfiles)return;
+    if(!chosenThisSession())openChooser();
+  });
 
   window.gcProfileLauncher={start,afterMount,openChooser,openOwnerEntry};
   start();
