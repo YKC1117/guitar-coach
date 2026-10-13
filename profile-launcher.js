@@ -43,7 +43,9 @@
     if(!window.gcProfiles)return;
     const current=window.gcProfiles.currentId;
     if(id===current&&window.gcProfiles.canRead?.()){
-      markChosen(id);closeChooser();hideOwnerFromExistingUi();return;
+      markChosen(id);closeChooser();hideOwnerFromExistingUi();
+      const p=profiles().find(x=>x.id===id);if(p?.name===OWNER_NAME)showOwnerTools();
+      return;
     }
     markChosen(id);
     let reloaded=false;
@@ -64,12 +66,25 @@
     setTimeout(()=>{overlay?.remove();overlay=null;document.documentElement.classList.remove("gc-launch-lock")},160);
   }
 
+  async function createOwner(){
+    if(!window.gcProfiles)return null;
+    const existing=owner();if(existing)return existing;
+    const p=window.gcProfiles.create(OWNER_NAME);
+    await choose(p.id);
+    return p;
+  }
+
   function addUser(){
     const input=overlay?.querySelector("[data-launch-new-name]");
     const status=overlay?.querySelector("[data-launch-status]");
     const name=input?.value.trim();
     if(!name){if(status)status.textContent="請先輸入使用者名稱";input?.focus();return}
-    if(name===OWNER_NAME){if(status)status.textContent="這個名稱已保留";return}
+    if(name===OWNER_NAME){
+      const existing=owner();
+      if(existing){if(status)status.textContent="管理者使用者已存在；長按左上角 G 即可進入。";return}
+      try{const p=window.gcProfiles.create(OWNER_NAME);input.value="";markChosen(p.id);choose(p.id)}catch(e){if(status)status.textContent=e?.message||"建立失敗"}
+      return;
+    }
     try{
       const p=window.gcProfiles.create(name);
       input.value="";
@@ -119,15 +134,18 @@
   }
 
   function openOwnerEntry(){
-    const p=owner();if(!p)return;
+    const p=owner();
     const old=document.getElementById("gcOwnerEntry");if(old)old.remove();
     const dialog=document.createElement("dialog");dialog.id="gcOwnerEntry";dialog.className="gc-owner-entry";
-    dialog.innerHTML='<h2>管理者入口</h2><p>此入口不會出現在一般使用者清單。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-enter>進入管理者使用者</button></div>';
+    dialog.innerHTML=p
+      ?'<h2>管理者入口</h2><p>此入口不會出現在一般使用者清單。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-enter>進入管理者使用者</button></div>'
+      :'<h2>建立管理者使用者</h2><p>目前還沒有「可樂」使用者。建立後會自動隱藏，不會出現在一般使用者選擇清單。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-create>建立可樂</button></div>';
     document.body.appendChild(dialog);
-    const close=()=>{dialog.close();dialog.remove()};
+    const close=()=>{if(dialog.open)dialog.close();dialog.remove()};
     dialog.querySelector("[data-owner-cancel]").onclick=close;
     dialog.addEventListener("cancel",e=>{e.preventDefault();close()});
-    dialog.querySelector("[data-owner-enter]").onclick=async()=>{markChosen(p.id);if(p.id===window.gcProfiles.currentId&&window.gcProfiles.canRead?.()){close();closeChooser();showOwnerTools();return}close();await choose(p.id)};
+    dialog.querySelector("[data-owner-enter]")?.addEventListener("click",async()=>{markChosen(p.id);if(p.id===window.gcProfiles.currentId&&window.gcProfiles.canRead?.()){close();closeChooser();showOwnerTools();return}close();await choose(p.id)});
+    dialog.querySelector("[data-owner-create]")?.addEventListener("click",async()=>{try{const created=window.gcProfiles.create(OWNER_NAME);markChosen(created.id);close();await choose(created.id)}catch(e){dialog.querySelector("p").textContent=e?.message||"建立失敗"}});
     dialog.showModal();
   }
 
