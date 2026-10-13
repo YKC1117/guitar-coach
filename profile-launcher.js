@@ -1,7 +1,7 @@
 (() => {
   "use strict";
-  const SESSION_KEY="guitarCoachSessionUserChosenV2";
-  const OWNER_NAME="可樂";
+  const SESSION_KEY="guitarCoachSessionUserChosenV3";
+  const OWNER_NAME="管理員";
   let overlay=null;
 
   const profiles=()=>window.gcProfiles?.list?.()||[];
@@ -66,23 +66,14 @@
     setTimeout(()=>{overlay?.remove();overlay=null;document.documentElement.classList.remove("gc-launch-lock")},160);
   }
 
-  async function createOwner(){
-    if(!window.gcProfiles)return null;
-    const existing=owner();if(existing)return existing;
-    const p=window.gcProfiles.create(OWNER_NAME);
-    await choose(p.id);
-    return p;
-  }
-
   function addUser(){
     const input=overlay?.querySelector("[data-launch-new-name]");
     const status=overlay?.querySelector("[data-launch-status]");
     const name=input?.value.trim();
     if(!name){if(status)status.textContent="請先輸入使用者名稱";input?.focus();return}
     if(name===OWNER_NAME){
-      const existing=owner();
-      if(existing){if(status)status.textContent="管理者使用者已存在；長按左上角 G 即可進入。";return}
-      try{const p=window.gcProfiles.create(OWNER_NAME);input.value="";markChosen(p.id);choose(p.id)}catch(e){if(status)status.textContent=e?.message||"建立失敗"}
+      if(status)status.textContent="「管理員」是系統保留名稱；一般使用者請使用其他名稱。";
+      input?.select();
       return;
     }
     try{
@@ -114,7 +105,7 @@
     if(overlay||(!force&&chosenThisSession())||!window.gcProfiles)return;
     const canClose=force&&chosenThisSession();
     document.documentElement.classList.add("gc-launch-lock");
-    overlay=document.createElement("section");overlay.className="gc-launcher";overlay.setAttribute("aria-modal","true");overlay.setAttribute("role","dialog");
+    overlay=document.createElement("section\");overlay.className="gc-launcher";overlay.setAttribute("aria-modal","true");overlay.setAttribute("role","dialog");
     overlay.innerHTML=`<div class="gc-launch-card">
       ${canClose?'<button type="button" class="gc-launch-close" aria-label="關閉">×</button>':''}
       <div class="gc-launch-brand" data-owner-gesture aria-hidden="true">G</div>
@@ -138,8 +129,8 @@
     const old=document.getElementById("gcOwnerEntry");if(old)old.remove();
     const dialog=document.createElement("dialog");dialog.id="gcOwnerEntry";dialog.className="gc-owner-entry";
     dialog.innerHTML=p
-      ?'<h2>管理者入口</h2><p>此入口不會出現在一般使用者清單。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-enter>進入管理者使用者</button></div>'
-      :'<h2>建立管理者使用者</h2><p>目前還沒有「可樂」使用者。建立後會自動隱藏，不會出現在一般使用者選擇清單。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-create>建立可樂</button></div>';
+      ?'<h2>管理員入口</h2><p>「管理員」是獨立的隱藏管理使用者，不會出現在一般使用者清單。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-enter>進入管理員</button></div>'
+      :'<h2>建立管理員</h2><p>管理員只用來開啟管理工具；建立後會隱藏。你的「可樂」可以照常當一般使用者使用。</p><div class="gc-owner-entry-actions"><button type="button" data-owner-cancel>取消</button><button type="button" data-owner-create>建立管理員</button></div>';
     document.body.appendChild(dialog);
     const close=()=>{if(dialog.open)dialog.close();dialog.remove()};
     dialog.querySelector("[data-owner-cancel]").onclick=close;
