@@ -70,6 +70,21 @@
     return String(value).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
   }
 
+  function openAdminEntry(){
+    const profiles=window.gcProfiles?.list?.()||[];
+    const current=profiles.find(p=>p.id===window.gcProfiles?.currentId);
+    if(current?.name==="管理員"){
+      document.documentElement.classList.add("gc-owner-tools-visible");
+      const admin=document.getElementById("gcAdminPanel");
+      if(!admin)return;
+      admin.hidden=false;
+      admin.open=true;
+      admin.scrollIntoView({behavior:"smooth",block:"start"});
+      return;
+    }
+    window.gcProfileLauncher?.openOwnerEntry?.();
+  }
+
   function enhanceProfilePanel(){
     const panel=document.getElementById("gcProfilePanel");
     if(!panel||panel.dataset.dataUx==="true")return;
@@ -83,25 +98,20 @@
       <div class="gc-data-hub-copy">
         <span class="kicker">DATA</span>
         <h3>資料管理</h3>
-        <p>一般使用者只會處理自己的資料；需要管理多人或復原資料，再進管理者工具。</p>
+        <p>一般使用者只會處理自己的資料；需要管理多人或復原資料，再進管理員入口。</p>
       </div>
       <div class="gc-data-actions">
         <button type="button" class="gc-data-own">
           <span>清除我的資料</span><small>先進本機回收區，可復原</small>
         </button>
         <button type="button" class="gc-data-admin">
-          <span>管理者工具</span><small>選擇使用者、多人清理、回收復原</small>
+          <span>管理員入口</span><small>多人清理、回收與復原</small>
         </button>
       </div>`;
     const status=panel.querySelector("#gcProfileStatus");
     panel.insertBefore(hub,status||null);
     hub.querySelector(".gc-data-own").onclick=openClearDialog;
-    hub.querySelector(".gc-data-admin").onclick=()=>{
-      const admin=document.getElementById("gcAdminPanel");
-      if(!admin)return;
-      admin.open=true;
-      admin.scrollIntoView({behavior:"smooth",block:"start"});
-    };
+    hub.querySelector(".gc-data-admin").onclick=openAdminEntry;
   }
 
   function enhanceAdmin(){
@@ -132,5 +142,5 @@
   }
 
   function mount(){enhanceProfilePanel();enhanceAdmin()}
-  window.gcDataUX={mount,openClearDialog};
+  window.gcDataUX={mount,openClearDialog,openAdminEntry};
 })();
