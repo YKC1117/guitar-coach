@@ -1,5 +1,5 @@
-const CACHE="guitar-coach-perfhotfix-20261013-13";
-const RELEASE="perfhotfix-20261013-13";
+const CACHE="guitar-coach-adminentry-20261013-14";
+const RELEASE="adminentry-20261013-14";
 const FILES=["index.html","styles.css","styles-v310.css","classroom-v311.css","classroom-theme-export.css","beginner-zone.css","data-management-ux.css","profile-launcher.css","navigation-ux.css","focus-ux.css","beginner-flow-ux.css","chord-coach-ux.css","finger-drill-ux.css","right-hand-coach-ux.css","styles-core.css","app.js","user-profiles.js","profile-launcher.js","local-admin.js","app-core.js","app-v310.js","classroom-grid.js","classroom-theme-export.js","beginner-zone.js","data-management-ux.js","navigation-ux.js","focus-ux.js","beginner-flow-ux.js","chord-coach-ux.js","finger-drill-ux.js","right-hand-coach-ux.js","manifest.webmanifest","icon.svg"];
 const BASE=new URL("./",self.location.href);
 const ASSET_PATHS=new Set(FILES.map(name=>new URL(name,BASE).pathname));
