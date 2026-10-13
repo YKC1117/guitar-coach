@@ -1,9 +1,10 @@
-@import url("./styles-v310.css?v=profile-20261013-4");
-@import url("./classroom-v311.css?v=profile-20261013-4");
-@import url("./classroom-theme-export.css?v=profile-20261013-4");
-@import url("./beginner-zone.css?v=profile-20261013-4");
-@import url("./data-management-ux.css?v=profile-20261013-4");
-@import url("./profile-launcher.css?v=profile-20261013-4");
+@import url("./styles-v310.css?v=uxflow-20261013-5");
+@import url("./classroom-v311.css?v=uxflow-20261013-5");
+@import url("./classroom-theme-export.css?v=uxflow-20261013-5");
+@import url("./beginner-zone.css?v=uxflow-20261013-5");
+@import url("./data-management-ux.css?v=uxflow-20261013-5");
+@import url("./profile-launcher.css?v=uxflow-20261013-5");
+@import url("./navigation-ux.css?v=uxflow-20261013-5");
 
 :is(#gcLoadFailure,#gcStorageFailure){margin:12px;padding:12px;border:1px solid var(--danger);border-radius:12px;background:var(--surface);color:var(--text)}:is(#gcLoadFailure,#gcStorageFailure) p{margin:0 0 8px}:is(#gcLoadFailure,#gcStorageFailure) button{padding:8px 14px;border:1px solid var(--line);border-radius:8px}
 
